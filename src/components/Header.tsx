@@ -10,6 +10,8 @@ import type { User } from "@/types";
 const TITLES: Record<string, string> = {
   "/dashboard": "Overview",
   "/dashboard/customers": "Customers",
+  "/dashboard/products": "Products",
+  "/dashboard/workflow-templates": "Workflow templates",
   "/dashboard/users": "Users",
 };
 
@@ -29,6 +31,23 @@ function describe(pathname: string) {
     return {
       title: "Customer details",
       parent: { href: "/dashboard/customers", label: "Customers" },
+    };
+  }
+
+  if (pathname.startsWith("/dashboard/products/")) {
+    return {
+      title: "Product details",
+      parent: { href: "/dashboard/products", label: "Products" },
+    };
+  }
+
+  if (pathname.startsWith("/dashboard/workflow-templates/")) {
+    return {
+      title: "Template details",
+      parent: {
+        href: "/dashboard/workflow-templates",
+        label: "Workflow templates",
+      },
     };
   }
 

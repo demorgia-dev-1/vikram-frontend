@@ -3,10 +3,12 @@
 import { use, useEffect } from "react";
 import Link from "next/link";
 import {
-  Avatar,
   Badge,
   Card,
   CardHeader,
+  DetailGrid,
+  DetailHero,
+  DetailItem,
   ErrorNote,
   Spinner,
   StatusBadge,
@@ -55,52 +57,45 @@ export default function UserDetailPage({
 
   if (!selected) return null;
 
-  const details: [string, React.ReactNode][] = [
-    ["Role", <Badge key="r" tone="sky">{selected.role}</Badge>],
-    ["Status", <StatusBadge key="s" active={selected.isActive} />],
-    ["Created", formatDate(selected.createdAt)],
-    ["Last updated", formatDate(selected.updatedAt)],
-    [
-      "User ID",
-      <span key="i" className="font-mono text-xs">
-        {selected.id}
-      </span>,
-    ],
-  ];
-
   return (
     <div className="space-y-5">
-      <Card className="p-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <Avatar name={selected.name} className="h-14 w-14 text-xl" />
-          <div className="min-w-0">
-            <h2 className="truncate text-xl font-semibold tracking-tight">
-              {selected.name}
-            </h2>
-            <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-              {selected.email}
-            </p>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
+      <DetailHero
+        name={selected.name}
+        subtitle={selected.email}
+        badges={
+          <>
             <Badge tone="sky">{selected.role}</Badge>
             <StatusBadge active={selected.isActive} />
-          </div>
-        </div>
-      </Card>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader title="Account details" />
-        <dl className="divide-y divide-slate-100 dark:divide-slate-800">
-          {details.map(([label, value]) => (
-            <div
-              key={label}
-              className="flex items-center justify-between gap-4 px-5 py-3"
-            >
-              <dt className="text-sm text-slate-500 dark:text-slate-400">{label}</dt>
-              <dd className="text-right text-sm font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <DetailGrid>
+          <DetailItem label="Full name">{selected.name}</DetailItem>
+          <DetailItem label="Email address">{selected.email}</DetailItem>
+
+          <DetailItem label="Role">
+            <Badge tone="sky">{selected.role}</Badge>
+          </DetailItem>
+
+          <DetailItem label="Status">
+            <StatusBadge active={selected.isActive} />
+          </DetailItem>
+
+          <DetailItem label="Created">{formatDate(selected.createdAt)}</DetailItem>
+
+          <DetailItem label="Last updated">
+            {formatDate(selected.updatedAt)}
+          </DetailItem>
+
+          <DetailItem label="User ID" className="sm:col-span-2">
+            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+              {selected.id}
+            </span>
+          </DetailItem>
+        </DetailGrid>
       </Card>
     </div>
   );

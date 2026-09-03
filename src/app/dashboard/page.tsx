@@ -2,12 +2,14 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { BuildingIcon, UsersIcon } from "@/components/icons";
+import { BoxIcon, BuildingIcon, UsersIcon } from "@/components/icons";
 import {
   Avatar,
   Badge,
   Card,
   CardHeader,
+  DetailGrid,
+  DetailItem,
   EmptyState,
   ErrorNote,
   PageHeader,
@@ -18,6 +20,7 @@ import {
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchCustomers } from "@/store/customersSlice";
+import { fetchProducts } from "@/store/productsSlice";
 import { fetchUsers } from "@/store/usersSlice";
 
 export default function DashboardPage() {
@@ -25,11 +28,13 @@ export default function DashboardPage() {
   const user = useAppSelector((state) => state.auth.user);
   const users = useAppSelector((state) => state.users);
   const customers = useAppSelector((state) => state.customers);
+  const products = useAppSelector((state) => state.products);
 
   // Small page size: the tiles only need meta.total, the list only the newest few.
   useEffect(() => {
     dispatch(fetchUsers({ page: 1, limit: 5 }));
     dispatch(fetchCustomers({ page: 1, limit: 5 }));
+    dispatch(fetchProducts({ page: 1, limit: 5 }));
   }, [dispatch]);
 
   if (!user) return null;
@@ -41,7 +46,7 @@ export default function DashboardPage() {
         description="Here's what's happening across your account today."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatTile
           label="Customers"
           value={customers.meta?.total}
@@ -57,6 +62,14 @@ export default function DashboardPage() {
           hint="Portal accounts"
           icon={<UsersIcon className="h-4 w-4" />}
           href="/dashboard/users"
+        />
+        <StatTile
+          label="Products"
+          value={products.meta?.total}
+          loading={products.loading}
+          hint="Registered parts"
+          icon={<BoxIcon className="h-4 w-4" />}
+          href="/dashboard/products"
         />
         <Tile label="Your role" hint="Access level">
           <Badge tone="sky">{user.role}</Badge>
@@ -121,29 +134,18 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader title="Your profile" />
-        <dl className="divide-y divide-slate-100 dark:divide-slate-800">
-          {(
-            [
-              ["Name", user.name],
-              ["Email", user.email],
-              ["Last updated", formatDate(user.updatedAt)],
-              [
-                "User ID",
-                <span key="id" className="font-mono text-xs">
-                  {user.id}
-                </span>,
-              ],
-            ] as [string, React.ReactNode][]
-          ).map(([label, value]) => (
-            <div
-              key={label}
-              className="flex items-center justify-between gap-4 px-5 py-3"
-            >
-              <dt className="text-sm text-slate-500 dark:text-slate-400">{label}</dt>
-              <dd className="text-right text-sm font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <DetailGrid>
+          <DetailItem label="Name">{user.name}</DetailItem>
+          <DetailItem label="Email">{user.email}</DetailItem>
+          <DetailItem label="Last updated">
+            {formatDate(user.updatedAt)}
+          </DetailItem>
+          <DetailItem label="User ID">
+            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+              {user.id}
+            </span>
+          </DetailItem>
+        </DetailGrid>
       </Card>
     </div>
   );

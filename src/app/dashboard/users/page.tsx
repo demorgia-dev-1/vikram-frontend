@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EyeIcon } from "@/components/icons";
+import { ConfirmModal } from "@/components/Modal";
+import UserFormModal from "@/components/UserFormModal";
+import { BanIcon, EyeIcon, PencilIcon } from "@/components/icons";
 import {
   Avatar,
   Badge,
@@ -19,13 +21,31 @@ import {
   thClass,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { fetchUsers } from "@/store/usersSlice";
+import { deleteUser, fetchUsers } from "@/store/usersSlice";
+import type { User } from "@/types";
 
 export default function UsersPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { items, meta, loading, error } = useAppSelector((state) => state.users);
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { items, meta, loading, error, deleting, deleteError } = useAppSelector(
+    (state) => state.users,
+  );
   const [page, setPage] = useState(1);
+  const [editTarget, setEditTarget] = useState<User | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+
+  const isAdmin = currentUser?.role === "ADMIN";
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+
+    const result = await dispatch(deleteUser(deleteTarget.id));
+
+    if (deleteUser.fulfilled.match(result)) {
+      setDeleteTarget(null);
+    }
+  }
 
   useEffect(() => {
     dispatch(fetchUsers({ page, limit: 20 }));
@@ -84,16 +104,47 @@ export default function UsersPage() {
                     <td className={tdClass}>
                       <StatusBadge active={user.isActive} />
                     </td>
-                    <td className={`${tdClass} whitespace-nowrap text-slate-600 dark:text-slate-400`}>
+                    <td
+                      className={`${tdClass} whitespace-nowrap text-slate-600 dark:text-slate-400`}
+                    >
                       {formatDate(user.createdAt)}
                     </td>
                     <td className={tdClass}>
                       <div className="flex items-center justify-end gap-1">
                         <IconButton
                           label="View details"
-                          onClick={() => router.push(`/dashboard/users/${user.id}`)}
+                          onClick={() =>
+                            router.push(`/dashboard/users/${user.id}`)
+                          }
                         >
                           <EyeIcon className="h-4 w-4" />
+                        </IconButton>
+                        <IconButton
+                          label={isAdmin ? "Edit user" : "Admins only"}
+                          disabled={!isAdmin}
+                          onClick={() => setEditTarget(user)}
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </IconButton>
+                        <IconButton
+                          label={
+                            user.id === currentUser?.id
+                              ? "You cannot deactivate yourself"
+                              : !user.isActive
+                                ? "Already inactive"
+                                : isAdmin
+                                  ? "Deactivate user"
+                                  : "Admins only"
+                          }
+                          tone="danger"
+                          disabled={
+                            !isAdmin ||
+                            !user.isActive ||
+                            user.id === currentUser?.id
+                          }
+                          onClick={() => setDeleteTarget(user)}
+                        >
+                          <BanIcon className="h-4 w-4" />
                         </IconButton>
                       </div>
                     </td>
@@ -108,6 +159,24 @@ export default function UsersPage() {
           <Pagination meta={meta} onPageChange={setPage} disabled={loading} />
         ) : null}
       </Card>
+
+      <UserFormModal
+        key={editTarget?.id}
+        user={editTarget}
+        onClose={() => setEditTarget(null)}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Deactivate user"
+        message={`${deleteTarget?.name ?? "This user"} will lose access to the portal. The account is kept for history and can still be viewed.`}
+        confirmLabel="Yes, deactivate"
+        loadingLabel="Deactivating…"
+        loading={deleting}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

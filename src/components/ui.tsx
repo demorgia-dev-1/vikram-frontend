@@ -1,6 +1,6 @@
 "use client";
 
-import type { Meta } from "@/types";
+import type { Meta, WorkflowTransition } from "@/types";
 
 export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -356,6 +356,142 @@ export function Avatar({
       {name.charAt(0).toUpperCase()}
     </span>
   );
+}
+
+/** Identity band at the top of a detail page: avatar, title, subtitle, badges. */
+export function DetailHero({
+  name,
+  subtitle,
+  badges,
+}: {
+  name: string;
+  subtitle?: React.ReactNode;
+  badges?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        cardClass,
+        "flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6",
+      )}
+    >
+      <Avatar name={name} className="h-12 w-12 text-lg" />
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+          {name}
+        </h2>
+        {subtitle ? (
+          <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      {badges ? (
+        <div className="flex flex-wrap items-center gap-2">{badges}</div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Detail fields as a responsive grid of stacked label/value pairs — reads far
+ * better on wide screens than rows stretched between two edges.
+ */
+export function DetailGrid({
+  columns = 2,
+  className,
+  children,
+}: {
+  columns?: 1 | 2 | 3;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const cols = {
+    1: "",
+    2: "sm:grid-cols-2",
+    3: "sm:grid-cols-2 lg:grid-cols-3",
+  };
+
+  return (
+    <dl className={cn("grid gap-x-8 gap-y-5 p-5", cols[columns], className)}>
+      {children}
+    </dl>
+  );
+}
+
+export function DetailItem({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        {label}
+      </dt>
+      <dd className="mt-1 break-words text-sm font-medium">{children}</dd>
+    </div>
+  );
+}
+
+/** Placeholder for a value that could not be resolved to something readable. */
+export function Muted({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="font-normal text-slate-400 dark:text-slate-500">
+      {children}
+    </span>
+  );
+}
+
+/** `src → dest`, used wherever a workflow transition is named. */
+export function TransitionLabel({
+  transition,
+  className,
+}: {
+  transition: WorkflowTransition;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium",
+        className,
+      )}
+    >
+      <span className="truncate">{transition.srcStage.name}</span>
+      <span className="shrink-0 text-slate-400" aria-hidden>
+        →
+      </span>
+      <span className="truncate">{transition.destStage.name}</span>
+    </span>
+  );
+}
+
+export function formatBytes(bytes: number) {
+  if (!bytes) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB"];
+  const power = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
+  const value = bytes / 1024 ** power;
+
+  return `${value >= 10 || power === 0 ? Math.round(value) : value.toFixed(1)} ${units[power]}`;
+}
+
+export function formatDateTime(value: string) {
+  return new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function formatDate(value: string) {

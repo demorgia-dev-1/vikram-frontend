@@ -164,6 +164,36 @@ export function PlusIcon({ className }: IconProps) {
   );
 }
 
+export function FlowIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect x="3" y="3" width="7" height="5" rx="1.5" />
+      <rect x="14" y="16" width="7" height="5" rx="1.5" />
+      <rect x="3" y="16" width="7" height="5" rx="1.5" />
+      <path d="M6.5 8v4.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 1 1.5 1.5v.5M6.5 14v2" />
+    </Svg>
+  );
+}
+
+export function BoxIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M21 8.5v7a1.5 1.5 0 0 1-.8 1.3l-7.5 4a1.5 1.5 0 0 1-1.4 0l-7.5-4a1.5 1.5 0 0 1-.8-1.3v-7" />
+      <path d="m3.3 7.3 8 4.2a1.5 1.5 0 0 0 1.4 0l8-4.2-8-4.2a1.5 1.5 0 0 0-1.4 0Z" />
+      <path d="M12 11.8V21" />
+    </Svg>
+  );
+}
+
+export function TrashIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 7h16M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+      <path d="M6 7v12.5A1.5 1.5 0 0 0 7.5 21h9a1.5 1.5 0 0 0 1.5-1.5V7" />
+    </Svg>
+  );
+}
+
 export function ArrowLeftIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

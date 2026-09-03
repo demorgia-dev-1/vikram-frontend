@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
+  BoxIcon,
   BuildingIcon,
   CloseIcon,
+  FlowIcon,
   GridIcon,
   LogoutIcon,
   PlaneIcon,
@@ -16,6 +18,12 @@ import { cn } from "@/components/ui";
 export const NAV = [
   { href: "/dashboard", label: "Overview", Icon: GridIcon },
   { href: "/dashboard/customers", label: "Customers", Icon: BuildingIcon },
+  { href: "/dashboard/products", label: "Products", Icon: BoxIcon },
+  {
+    href: "/dashboard/workflow-templates",
+    label: "Workflows",
+    Icon: FlowIcon,
+  },
   { href: "/dashboard/users", label: "Users", Icon: UsersIcon },
 ];
 
