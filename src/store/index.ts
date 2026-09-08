@@ -4,6 +4,7 @@ import authReducer from "./authSlice";
 import customersReducer from "./customersSlice";
 import productWorkflowReducer from "./productWorkflowSlice";
 import productsReducer from "./productsSlice";
+import toastReducer from "./toastSlice";
 import usersReducer from "./usersSlice";
 import workflowTemplatesReducer from "./workflowTemplatesSlice";
 
@@ -16,6 +17,7 @@ export const makeStore = () =>
       products: productsReducer,
       productWorkflow: productWorkflowReducer,
       workflowTemplates: workflowTemplatesReducer,
+      toasts: toastReducer,
     },
   });
 

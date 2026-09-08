@@ -47,10 +47,10 @@ export default function LoginPage() {
     <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[1.1fr_1fr]">
       <BrandPanel />
 
-      <section className="flex flex-1 items-center justify-center bg-white px-6 py-12 dark:bg-slate-950">
+      <section className="flex flex-1 items-center justify-center bg-surface px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600 text-white shadow-sm shadow-sky-600/25">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <PlaneIcon className="h-5 w-5" />
             </span>
             <span className="text-base font-semibold tracking-tight">
@@ -58,8 +58,10 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </h1>
+          <p className="mt-2 text-sm text-muted">
             Sign in to manage your parts, orders and service requests.
           </p>
 
@@ -68,7 +70,7 @@ export default function LoginPage() {
               Email
             </label>
             <div className="relative mt-1.5">
-              <MailIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <MailIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
               <input
                 id="email"
                 name="email"
@@ -89,13 +91,13 @@ export default function LoginPage() {
               </label>
               <a
                 href="#"
-                className="text-xs font-medium text-sky-600 transition hover:text-sky-500 dark:text-sky-400"
+                className="text-xs font-medium text-primary transition hover:text-primary-hover"
               >
                 Forgot password?
               </a>
             </div>
             <div className="relative mt-1.5">
-              <LockIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <LockIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
               <input
                 id="password"
                 name="password"
@@ -112,7 +114,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((value) => !value)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-subtle transition hover:text-muted"
               >
                 {showPassword ? (
                   <EyeOffIcon className="h-4 w-4" />
@@ -133,7 +135,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-8 text-center text-xs text-subtle">
             New customer? Contact us to request portal access.
           </p>
         </div>
@@ -162,12 +164,13 @@ function BrandPanel() {
             "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
           backgroundSize: "56px 56px",
           maskImage: "radial-gradient(70% 60% at 50% 40%, black, transparent)",
-          WebkitMaskImage: "radial-gradient(70% 60% at 50% 40%, black, transparent)",
+          WebkitMaskImage:
+            "radial-gradient(70% 60% at 50% 40%, black, transparent)",
         }}
       />
 
       <div className="relative flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600 text-white shadow-lg shadow-sky-600/25">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg">
           <PlaneIcon className="h-5 w-5" />
         </span>
         <span className="text-lg font-semibold tracking-tight text-white">
@@ -181,15 +184,18 @@ function BrandPanel() {
           <br />
           tracked end to end.
         </h2>
-        <p className="mt-4 text-sm leading-relaxed text-slate-300">
+        <p className="mt-4 text-sm leading-relaxed text-subtle">
           Submit your aircraft parts for delivery, repair and maintenance — then
           follow each one from pickup to return in a single portal.
         </p>
 
         <ul className="mt-8 space-y-3">
           {FEATURES.map((item) => (
-            <li key={item} className="flex items-center gap-3 text-sm text-slate-300">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-400">
+            <li
+              key={item}
+              className="flex items-center gap-3 text-sm text-subtle"
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sky-400">
                 <CheckIcon className="h-3 w-3" />
               </span>
               {item}
@@ -198,7 +204,7 @@ function BrandPanel() {
         </ul>
       </div>
 
-      <p className="relative text-xs text-slate-500">
+      <p className="relative text-xs text-muted">
         © {new Date().getFullYear()} Vikram Aviation. All rights reserved.
       </p>
     </aside>

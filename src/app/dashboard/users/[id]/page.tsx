@@ -35,7 +35,7 @@ export default function UserDetailPage({
 
   if (selectedLoading) {
     return (
-      <div className="flex justify-center py-20 text-slate-400">
+      <div className="flex justify-center py-20 text-subtle">
         <Spinner className="h-6 w-6" />
       </div>
     );
@@ -47,7 +47,7 @@ export default function UserDetailPage({
         <ErrorNote message={selectedError} />
         <Link
           href="/dashboard/users"
-          className="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400"
+          className="text-sm font-medium text-primary hover:text-primary-hover"
         >
           ← Back to users
         </Link>
@@ -84,16 +84,16 @@ export default function UserDetailPage({
             <StatusBadge active={selected.isActive} />
           </DetailItem>
 
-          <DetailItem label="Created">{formatDate(selected.createdAt)}</DetailItem>
+          <DetailItem label="Created">
+            {formatDate(selected.createdAt)}
+          </DetailItem>
 
           <DetailItem label="Last updated">
             {formatDate(selected.updatedAt)}
           </DetailItem>
 
           <DetailItem label="User ID" className="sm:col-span-2">
-            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-              {selected.id}
-            </span>
+            <span className="font-mono text-xs text-muted">{selected.id}</span>
           </DetailItem>
         </DetailGrid>
       </Card>

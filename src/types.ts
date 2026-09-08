@@ -1,6 +1,6 @@
-export type Role = "ADMIN" | "STAFF" | "CUSTOMER" | "USER";
+export type Role = "ADMIN" | "USER" | "RIDER";
 
-export const ROLES: Role[] = ["ADMIN", "STAFF", "CUSTOMER", "USER"];
+export const ROLES: Role[] = ["ADMIN", "USER", "RIDER"];
 
 export type CustomerType = "AIRLINE" | "MRO" | "OEM";
 
@@ -18,6 +18,27 @@ export interface UserPayload {
   name: string;
   email: string;
   role: Role;
+}
+
+/** Create also takes an initial password; update omits it. */
+export interface CreateUserPayload extends UserPayload {
+  password: string;
+}
+
+export interface WorkflowTemplatePayload {
+  name: string;
+  description?: string;
+}
+
+export interface StagePayload {
+  name: string;
+  isInitial?: boolean;
+  isTerminal?: boolean;
+}
+
+export interface TransitionPayload {
+  srcStageId: string;
+  destStageId: string;
 }
 
 export interface Customer {
@@ -100,9 +121,10 @@ export interface Product {
   description: string;
   customerId: string;
   workflowTemplateId: string;
-  workflowTemplateVersion: number;
-  dopWorkflowInstanceId: string;
-  dopWorkflowItemId: string;
+  /** The published version's id — not its number; resolve via the versions list. */
+  workflowTemplateVersionId: string;
+  workflowInstanceId: string;
+  workflowItemId: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +136,7 @@ export interface ProductPayload {
   description: string;
   customerId: string;
   workflowTemplateId: string;
+  /** Optional on the API; omitted means the latest published version. */
   workflowTemplateVersion: number;
   transitionAssignments: TransitionAssignmentInput[];
 }
@@ -133,6 +156,26 @@ export interface ProductTransition {
   assigneeName?: string | null;
   assigneeEmail?: string | null;
   allowAttachments?: boolean;
+}
+
+/** A transition assigned to the signed-in user that is ready to run now. */
+export interface PendingTransition {
+  productId: string;
+  productName: string;
+  transitionId: string;
+  srcStage: WorkflowStage;
+  destStage: WorkflowStage;
+  allowAttachments: boolean;
+}
+
+/** A transition the signed-in user has already performed. */
+export interface PerformedTransition {
+  productId: string;
+  productName: string;
+  transitionId: string;
+  srcStage: WorkflowStage;
+  destStage: WorkflowStage;
+  performedAt: string;
 }
 
 export interface AssignTransitionPayload {

@@ -56,19 +56,20 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl dark:border-slate-800 dark:bg-slate-900",
+          "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl border border-border-subtle bg-white shadow-2xl sm:rounded-2xl ",
           size === "sm" ? "sm:max-w-md" : "sm:max-w-2xl",
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
           <div>
-            <h2 id="modal-title" className="text-base font-semibold tracking-tight">
+            <h2
+              id="modal-title"
+              className="text-base font-semibold tracking-tight"
+            >
               {title}
             </h2>
             {description ? (
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {description}
-              </p>
+              <p className="mt-1 text-sm text-muted">{description}</p>
             ) : null}
           </div>
           <button
@@ -76,7 +77,7 @@ export default function Modal({
             onClick={onClose}
             disabled={closeDisabled}
             aria-label="Close dialog"
-            className="-mr-1 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="-mr-1 rounded-lg p-1.5 text-subtle transition hover:bg-surface-muted hover:text-muted disabled:opacity-40"
           >
             <CloseIcon />
           </button>
@@ -85,7 +86,7 @@ export default function Modal({
         <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
 
         {footer ? (
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-800">
+          <div className="flex justify-end gap-2 border-t border-border-subtle px-5 py-4">
             {footer}
           </div>
         ) : null}
@@ -130,14 +131,14 @@ export function ConfirmModal({
           <Button
             loading={loading}
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-500 focus-visible:ring-red-500/30"
+            className="bg-danger hover:bg-danger-soft0 focus-visible:ring-danger/30"
           >
             {loading ? loadingLabel : confirmLabel}
           </Button>
         </>
       }
     >
-      <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
+      <p className="text-sm text-muted">{message}</p>
       {error ? (
         <div className="mt-4">
           <ErrorNote message={error} />

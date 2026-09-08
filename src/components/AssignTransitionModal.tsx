@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import Modal from "@/components/Modal";
-import { Button, ErrorNote, Field, TransitionLabel, inputClass } from "@/components/ui";
+import {
+  Button,
+  ErrorNote,
+  Field,
+  TransitionLabel,
+  inputClass,
+} from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import { assignTransition } from "@/store/productWorkflowSlice";
 import type { ProductTransition } from "@/types";
 
@@ -41,13 +48,19 @@ export default function AssignTransitionModal({
       }),
     );
 
-    if (assignTransition.fulfilled.match(result)) onClose();
+    if (assignTransition.fulfilled.match(result)) {
+      const assignee = users.find((user) => user.id === assigneeUserId);
+      dispatch(showToast(`Assigned to ${assignee?.name ?? "user"}`));
+      onClose();
+    }
   }
 
   return (
     <Modal
       open={Boolean(transition)}
-      title={transition?.assigneeId ? "Reassign transition" : "Assign transition"}
+      title={
+        transition?.assigneeId ? "Reassign transition" : "Assign transition"
+      }
       description="Only this user, or an admin, will be able to perform it."
       onClose={onClose}
       size="sm"
@@ -70,7 +83,7 @@ export default function AssignTransitionModal({
     >
       {transition ? (
         <form id="assign-form" onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-800">
+          <div className="rounded-lg border border-border-subtle px-3 py-2.5">
             <TransitionLabel transition={transition} />
           </div>
 
@@ -92,17 +105,17 @@ export default function AssignTransitionModal({
             </select>
           </Field>
 
-          <label className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-400">
+          <label className="flex items-start gap-2.5 text-sm text-muted">
             <input
               type="checkbox"
               checked={allowAttachments}
               onChange={(event) => setAllowAttachments(event.target.checked)}
               disabled={assigning}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500/30 dark:border-slate-600 dark:bg-slate-800"
+              className="mt-0.5 h-4 w-4 rounded border-border-subtle text-primary focus:ring-ring/25"
             />
             <span>
               Allow attachments
-              <span className="block text-xs text-slate-500 dark:text-slate-500">
+              <span className="block text-xs text-muted">
                 The assignee may upload files when performing this transition.
               </span>
             </span>

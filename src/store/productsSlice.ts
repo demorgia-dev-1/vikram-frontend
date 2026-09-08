@@ -108,7 +108,7 @@ export const deleteProduct = createAsyncThunk<
     return { id, product: data && data.id ? data : null };
   } catch (error) {
     return rejectWithValue(
-      getErrorMessage(error, "Could not deactivate product."),
+      getErrorMessage(error, "Could not deactivate product.")
     );
   }
 });
@@ -177,7 +177,7 @@ const productsSlice = createSlice({
         state.updating = false;
         state.selected = action.payload;
         state.items = state.items.map((item) =>
-          item.id === action.payload.id ? action.payload : item,
+          item.id === action.payload.id ? action.payload : item
         );
       })
       .addCase(updateProduct.rejected, (state, action) => {
@@ -198,7 +198,7 @@ const productsSlice = createSlice({
         }
 
         state.items = state.items.map((item) =>
-          item.id === id ? (product ?? { ...item, isActive: false }) : item,
+          item.id === id ? product ?? { ...item, isActive: false } : item
         );
       })
       .addCase(deleteProduct.rejected, (state, action) => {

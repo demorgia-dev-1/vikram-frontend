@@ -5,6 +5,7 @@ import CustomerFields, { EMPTY_CUSTOMER } from "@/components/CustomerFields";
 import Modal from "@/components/Modal";
 import { Button, ErrorNote } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import { createCustomer, updateCustomer } from "@/store/customersSlice";
 import type { Customer, CustomerPayload } from "@/types";
 
@@ -64,6 +65,9 @@ export default function CustomerFormModal({
       : createCustomer.fulfilled.match(result);
 
     if (ok) {
+      dispatch(
+        showToast(customer ? `${form.name} updated` : `${form.name} added`),
+      );
       onSaved?.();
       onClose();
     }

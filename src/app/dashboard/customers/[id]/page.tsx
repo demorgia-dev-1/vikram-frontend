@@ -38,7 +38,7 @@ export default function CustomerDetailPage({
 
   if (selectedLoading) {
     return (
-      <div className="flex justify-center py-20 text-slate-400">
+      <div className="flex justify-center py-20 text-subtle">
         <Spinner className="h-6 w-6" />
       </div>
     );
@@ -50,7 +50,7 @@ export default function CustomerDetailPage({
         <ErrorNote message={selectedError} />
         <Link
           href="/dashboard/customers"
-          className="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400"
+          className="text-sm font-medium text-primary hover:text-primary-hover"
         >
           ← Back to customers
         </Link>
@@ -100,9 +100,7 @@ export default function CustomerDetailPage({
           </DetailItem>
 
           <DetailItem label="Customer ID" className="sm:col-span-2">
-            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-              {selected.id}
-            </span>
+            <span className="font-mono text-xs text-muted">{selected.id}</span>
           </DetailItem>
         </DetailGrid>
       </Card>

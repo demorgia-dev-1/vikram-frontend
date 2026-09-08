@@ -175,6 +175,15 @@ export function FlowIcon({ className }: IconProps) {
   );
 }
 
+export function InboxIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3 13h4l1.5 3h7L17 13h4" />
+      <path d="M5.5 5h13l2.5 8v5a1.5 1.5 0 0 1-1.5 1.5h-16A1.5 1.5 0 0 1 2 18v-5Z" />
+    </Svg>
+  );
+}
+
 export function BoxIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

@@ -22,6 +22,7 @@ import {
   thClass,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import { deleteCustomer, fetchCustomers } from "@/store/customersSlice";
 import type { Customer } from "@/types";
 
@@ -30,7 +31,7 @@ export default function CustomersPage() {
   const dispatch = useAppDispatch();
   const role = useAppSelector((state) => state.auth.user?.role);
   const { items, meta, loading, error, deleting, deleteError } = useAppSelector(
-    (state) => state.customers
+    (state) => state.customers,
   );
 
   const [page, setPage] = useState(1);
@@ -54,6 +55,7 @@ export default function CustomersPage() {
     const result = await dispatch(deleteCustomer(deleteTarget.id));
 
     if (deleteCustomer.fulfilled.match(result)) {
+      dispatch(showToast(`${deleteTarget.name} deactivated`));
       setDeleteTarget(null);
     }
   }
@@ -76,7 +78,7 @@ export default function CustomersPage() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/30">
+            <thead className="border-b border-border-subtle bg-surface-muted">
               <tr>
                 <th className={thClass}>Customer</th>
                 <th className={thClass}>Type</th>
@@ -87,7 +89,7 @@ export default function CustomersPage() {
                 <th className={`${thClass} text-right`}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border-subtle">
               {loading ? (
                 <TableSkeleton cols={7} />
               ) : items.length === 0 ? (
@@ -103,14 +105,19 @@ export default function CustomersPage() {
                 items.map((customer) => (
                   <tr
                     key={customer.id}
-                    className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    className="transition hover:bg-surface-muted"
                   >
                     <td className={tdClass}>
                       <div className="flex items-center gap-3">
-                        <Avatar name={customer.name} className="h-9 w-9 text-xs" />
+                        <Avatar
+                          name={customer.name}
+                          className="h-9 w-9 text-xs"
+                        />
                         <div className="min-w-0">
-                          <p className="truncate font-medium">{customer.name}</p>
-                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                          <p className="truncate font-medium">
+                            {customer.name}
+                          </p>
+                          <p className="truncate text-xs text-muted">
                             {customer.email}
                           </p>
                         </div>
@@ -119,16 +126,16 @@ export default function CustomersPage() {
                     <td className={tdClass}>
                       <Badge tone="sky">{customer.type}</Badge>
                     </td>
-                    <td className={`${tdClass} whitespace-nowrap text-slate-600 dark:text-slate-400`}>
+                    <td className={`${tdClass} whitespace-nowrap text-muted`}>
                       {customer.phone}
                     </td>
-                    <td className={`${tdClass} max-w-xs text-slate-600 dark:text-slate-400`}>
+                    <td className={`${tdClass} max-w-xs text-muted`}>
                       <span className="line-clamp-2">{customer.address}</span>
                     </td>
                     <td className={tdClass}>
                       <StatusBadge active={customer.isActive} />
                     </td>
-                    <td className={`${tdClass} whitespace-nowrap text-slate-600 dark:text-slate-400`}>
+                    <td className={`${tdClass} whitespace-nowrap text-muted`}>
                       {formatDate(customer.createdAt)}
                     </td>
                     <td className={tdClass}>

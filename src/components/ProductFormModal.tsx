@@ -12,6 +12,7 @@ import {
   labelClass,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import { fetchCustomers } from "@/store/customersSlice";
 import { createProduct, updateProduct } from "@/store/productsSlice";
 import { fetchUsers } from "@/store/usersSlice";
@@ -75,7 +76,9 @@ export default function ProductFormModal({
   );
   // Keyed by transition id: the rows themselves come from the published graph,
   // so nothing here has to be kept in sync with the fetched template.
-  const [assignments, setAssignments] = useState<Record<string, Assignment>>({});
+  const [assignments, setAssignments] = useState<Record<string, Assignment>>(
+    {},
+  );
 
   // The create form needs customers, users and templates to populate its pickers.
   useEffect(() => {
@@ -109,9 +112,7 @@ export default function ProductFormModal({
     setAssignments({});
 
     if (version) {
-      dispatch(
-        fetchTemplateVersion({ id: form.workflowTemplateId, version }),
-      );
+      dispatch(fetchTemplateVersion({ id: form.workflowTemplateId, version }));
     }
   }
 
@@ -150,7 +151,10 @@ export default function ProductFormModal({
           }),
         )
       : await dispatch(
-          createProduct({ ...form, transitionAssignments: collectAssignments() }),
+          createProduct({
+            ...form,
+            transitionAssignments: collectAssignments(),
+          }),
         );
 
     const ok = product
@@ -158,6 +162,9 @@ export default function ProductFormModal({
       : createProduct.fulfilled.match(result);
 
     if (ok) {
+      dispatch(
+        showToast(product ? `${form.name} updated` : `${form.name} created`),
+      );
       onSaved?.();
       onClose();
     }
@@ -246,7 +253,9 @@ export default function ProductFormModal({
                   className={inputClass}
                 >
                   <option value="">
-                    {templatesLoading ? "Loading templates…" : "Select a template…"}
+                    {templatesLoading
+                      ? "Loading templates…"
+                      : "Select a template…"}
                   </option>
                   {templates.map((template) => (
                     <option key={template.id} value={template.id}>
@@ -281,8 +290,10 @@ export default function ProductFormModal({
               </Field>
             </div>
 
-            {form.workflowTemplateId && !versionsLoading && versions.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-300 px-3 py-3 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            {form.workflowTemplateId &&
+            !versionsLoading &&
+            versions.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-xs text-muted">
                 This template has no published versions yet, so a product cannot
                 be created against it.
               </p>
@@ -290,28 +301,28 @@ export default function ProductFormModal({
 
             <div>
               <span className={labelClass}>Transition assignments</span>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-muted">
                 Transitions come from the selected published version. Leave a
                 transition unassigned to use the workflow&apos;s own default.
               </p>
 
               <div className="mt-2 space-y-3">
                 {versionLoading ? (
-                  <div className="flex justify-center py-6 text-slate-400">
+                  <div className="flex justify-center py-6 text-subtle">
                     <Spinner className="h-5 w-5" />
                   </div>
                 ) : versionError ? (
                   <ErrorNote message={versionError} />
                 ) : !graphMatchesSelection ? (
-                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  <p className="rounded-lg border border-dashed border-border-subtle px-3 py-4 text-center text-xs text-muted">
                     Pick a template and version to load its transitions.
                   </p>
                 ) : graph.transitions.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  <p className="rounded-lg border border-dashed border-border-subtle px-3 py-4 text-center text-xs text-muted">
                     This version has no transitions.
                   </p>
                 ) : (
-                  <div className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+                  <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle">
                     {graph.transitions.map((transition) => {
                       const assignment = assignments[transition.id];
                       const label = `${transition.srcStage.name} → ${transition.destStage.name}`;
@@ -344,7 +355,7 @@ export default function ProductFormModal({
 
                           <label
                             title="Allow attachments on this transition"
-                            className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"
+                            className="flex shrink-0 items-center gap-1.5 text-xs text-muted"
                           >
                             <input
                               type="checkbox"
@@ -355,7 +366,7 @@ export default function ProductFormModal({
                                 })
                               }
                               disabled={saving || !assignment?.assigneeUserId}
-                              className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500/30 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800"
+                              className="h-4 w-4 rounded border-border-subtle text-primary focus:ring-ring/25 disabled:opacity-50"
                             />
                             Attachments
                           </label>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import AssignTransitionModal from "@/components/AssignTransitionModal";
 import PerformTransitionModal from "@/components/PerformTransitionModal";
 import WorkflowGraph from "@/components/WorkflowGraph";
+import { BoxIcon } from "@/components/icons";
 import {
   Avatar,
   Badge,
@@ -29,6 +30,8 @@ import { fetchCustomerById } from "@/store/customersSlice";
 import {
   clearProductWorkflow,
   fetchAttachmentUrl,
+  fetchMyPendingTransitions,
+  fetchMyPerformedTransitions,
   fetchProductHistory,
   fetchProductTransitions,
 } from "@/store/productWorkflowSlice";
@@ -37,7 +40,7 @@ import { fetchUsers } from "@/store/usersSlice";
 import type { ProductTransition } from "@/types";
 import {
   clearSelectedTemplate,
-  fetchTemplateVersion,
+  fetchTemplateVersions,
   fetchTemplates,
 } from "@/store/workflowTemplatesSlice";
 
@@ -53,7 +56,7 @@ export default function ProductDetailPage({
   );
   const customer = useAppSelector((state) => state.customers.selected);
   const templates = useAppSelector((state) => state.workflowTemplates.items);
-  const graph = useAppSelector((state) => state.workflowTemplates.version);
+  const versions = useAppSelector((state) => state.workflowTemplates.versions);
   const {
     transitions: productTransitions,
     transitionsLoading,
@@ -61,6 +64,8 @@ export default function ProductDetailPage({
     history,
     historyLoading,
     historyError,
+    pending,
+    performed,
   } = useAppSelector((state) => state.productWorkflow);
 
   const [assignTarget, setAssignTarget] = useState<ProductTransition | null>(
@@ -76,6 +81,8 @@ export default function ProductDetailPage({
     dispatch(fetchTemplates());
     dispatch(fetchProductTransitions(id));
     dispatch(fetchProductHistory(id));
+    dispatch(fetchMyPendingTransitions());
+    dispatch(fetchMyPerformedTransitions());
     dispatch(fetchUsers({ page: 1, limit: 100 }));
     return () => {
       dispatch(clearSelectedProduct());
@@ -91,22 +98,13 @@ export default function ProductDetailPage({
     }
   }, [dispatch, selected?.customerId]);
 
-  // Assignments carry only a transitionId, so load the published graph it refers
-  // to in order to name the stages on each side of the transition.
+  // The product references its version by id, so the versions list is needed to
+  // turn that into the version number the graph endpoint takes.
   useEffect(() => {
-    if (selected?.workflowTemplateId && selected.workflowTemplateVersion) {
-      dispatch(
-        fetchTemplateVersion({
-          id: selected.workflowTemplateId,
-          version: selected.workflowTemplateVersion,
-        }),
-      );
+    if (selected?.workflowTemplateId) {
+      dispatch(fetchTemplateVersions(selected.workflowTemplateId));
     }
-  }, [
-    dispatch,
-    selected?.workflowTemplateId,
-    selected?.workflowTemplateVersion,
-  ]);
+  }, [dispatch, selected?.workflowTemplateId]);
 
   // The URL is short-lived, so it is fetched on click rather than up front.
   async function openAttachment(logId: string, attachmentId: string) {
@@ -122,7 +120,7 @@ export default function ProductDetailPage({
 
   if (selectedLoading) {
     return (
-      <div className="flex justify-center py-20 text-slate-400">
+      <div className="flex justify-center py-20 text-subtle">
         <Spinner className="h-6 w-6" />
       </div>
     );
@@ -134,7 +132,7 @@ export default function ProductDetailPage({
         <ErrorNote message={selectedError} />
         <Link
           href="/dashboard/products"
-          className="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400"
+          className="text-sm font-medium text-primary hover:text-primary-hover"
         >
           ← Back to products
         </Link>
@@ -150,10 +148,25 @@ export default function ProductDetailPage({
   const template = templates.find(
     (item) => item.id === selected.workflowTemplateId,
   );
-  // Only trust the graph if it is the version this product was created from.
-  const versionMatches = graph?.version === selected.workflowTemplateVersion;
-  const transitions = versionMatches ? graph.transitions : [];
-  const stages = versionMatches ? graph.stages : [];
+  const versionNumber = versions.find(
+    (entry) => entry.id === selected.workflowTemplateVersionId,
+  )?.version;
+
+  /*
+   * Everything on a product lives in its workflow *instance*: the transitions,
+   * their stages, the assignments and the history logs all use instance ids.
+   * The template version graph is a different id space entirely, so the stages
+   * are derived from the transitions themselves rather than fetched separately.
+   */
+  const transitions = productTransitions;
+  const stages = Array.from(
+    new Map(
+      transitions.flatMap((transition) => [
+        [transition.srcStage.id, transition.srcStage] as const,
+        [transition.destStage.id, transition.destStage] as const,
+      ]),
+    ).values(),
+  );
 
   // History is newest first, so its latest destination is where the product sits.
   const currentStageId =
@@ -165,90 +178,225 @@ export default function ProductDetailPage({
     return stages.find((stage) => stage.id === stageId)?.name ?? "a stage";
   }
 
+  /** Transitions on this product the API says are waiting on the signed-in user. */
+  const waitingOnYou = new Set(
+    pending
+      .filter((item) => item.productId === id)
+      .map((item) => item.transitionId),
+  );
+
+  /** Transitions on this product performed by the signed-in user. */
+  const performedByYou = new Set(
+    performed
+      .filter((item) => item.productId === id)
+      .map((item) => item.transitionId),
+  );
+
+  /** Transitions already recorded in this product's history. */
+  const performedAt = new Map(
+    history.map((entry) => [entry.transitionId, entry.performedAt]),
+  );
+
+  /**
+   * The pending endpoint is the server's own answer for the signed-in user, so
+   * it wins outright. The derived rule below only covers admins, who may run a
+   * transition assigned to someone else and so never appear in that list.
+   */
+  function canPerformTransition(transitionId: string) {
+    if (waitingOnYou.has(transitionId)) return true;
+
+    const match = productTransitions.find((item) => item.id === transitionId);
+    if (!match || performedAt.has(transitionId)) return false;
+
+    return isAdmin && match.srcStage.id === currentStageId;
+  }
+
   return (
     <div className="space-y-5">
       <DetailHero
         name={selected.name}
-        subtitle={selected.description}
+        icon={<BoxIcon className="h-5 w-5" />}
+        meta={[
+          resolvedCustomer ? (
+            <Link
+              key="customer"
+              href={`/dashboard/customers/${selected.customerId}`}
+              className="transition hover:text-primary"
+            >
+              {resolvedCustomer.name}
+            </Link>
+          ) : (
+            <Muted key="customer">No customer</Muted>
+          ),
+          template ? (
+            <Link
+              key="template"
+              href={`/dashboard/workflow-templates/${selected.workflowTemplateId}`}
+              className="transition hover:text-primary"
+            >
+              {template.name}
+            </Link>
+          ) : (
+            <Muted key="template">No template</Muted>
+          ),
+          <span key="version">
+            {versionNumber ? `v${versionNumber}` : "Unversioned"}
+          </span>,
+        ]}
         badges={
           <>
-            <Badge>v{selected.workflowTemplateVersion}</Badge>
+            {currentStageId ? (
+              <Badge tone="sky">{stageName(currentStageId)}</Badge>
+            ) : null}
             <StatusBadge active={selected.isActive} />
           </>
         }
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-5">
+      <Card>
+        <CardHeader title="Overview" />
+        <DetailGrid>
+          <DetailItem label="Customer">
+            {resolvedCustomer ? (
+              <Link
+                href={`/dashboard/customers/${selected.customerId}`}
+                className="text-primary transition hover:text-primary-hover"
+              >
+                {resolvedCustomer.name}
+              </Link>
+            ) : (
+              <Muted>Not available</Muted>
+            )}
+          </DetailItem>
+
+          <DetailItem label="Workflow template">
+            {template ? (
+              <Link
+                href={`/dashboard/workflow-templates/${selected.workflowTemplateId}`}
+                className="text-primary transition hover:text-primary-hover"
+              >
+                {template.name}
+              </Link>
+            ) : (
+              <Muted>Not available</Muted>
+            )}
+          </DetailItem>
+
+          <DetailItem label="Template version">
+            <Badge>{versionNumber ? `v${versionNumber}` : "—"}</Badge>
+          </DetailItem>
+
+          <DetailItem label="Current stage">
+            {currentStageId ? (
+              stageName(currentStageId)
+            ) : (
+              <Muted>Not started</Muted>
+            )}
+          </DetailItem>
+
+          <DetailItem label="Status">
+            <StatusBadge active={selected.isActive} />
+          </DetailItem>
+
+          <DetailItem label="Created">
+            {formatDate(selected.createdAt)}
+          </DetailItem>
+
+          <DetailItem label="Description" className="sm:col-span-2">
+            {selected.description}
+          </DetailItem>
+        </DetailGrid>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <CardHeader title="Workflow" />
+        <div>
           {stages.length > 0 ? (
-            <Card className="overflow-hidden">
-              <CardHeader title="Workflow" />
+            <div className="border-b border-border-subtle">
               <WorkflowGraph
                 stages={stages}
                 transitions={transitions}
+                readOnly
+                heightClass="h-[22rem]"
                 currentStageId={currentStageId}
+                canPerform={canPerformTransition}
+                onPerform={(transitionId) => {
+                  const match = productTransitions.find(
+                    (item) => item.id === transitionId,
+                  );
+                  if (match) setPerformTarget(match);
+                }}
               />
-            </Card>
+            </div>
           ) : null}
 
-          <Card className="overflow-hidden">
-            <CardHeader title="Transitions" />
+          {transitionsError ? (
+            <div className="p-5">
+              <ErrorNote message={transitionsError} />
+            </div>
+          ) : transitionsLoading ? (
+            <div className="flex justify-center py-10 text-subtle">
+              <Spinner className="h-5 w-5" />
+            </div>
+          ) : productTransitions.length === 0 ? (
+            <EmptyState title="No transitions available" />
+          ) : (
+            <ul className="divide-y divide-border-subtle">
+              {productTransitions.map((transition) => {
+                const available = transition.srcStage.id === currentStageId;
+                const canPerform = canPerformTransition(transition.id);
+                const performedOn = performedAt.get(transition.id);
 
-            {transitionsError ? (
-              <div className="p-5">
-                <ErrorNote message={transitionsError} />
-              </div>
-            ) : transitionsLoading ? (
-              <div className="flex justify-center py-10 text-slate-400">
-                <Spinner className="h-5 w-5" />
-              </div>
-            ) : productTransitions.length === 0 ? (
-              <EmptyState title="No transitions available" />
-            ) : (
-              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                {productTransitions.map((transition) => {
-                  const isAssignee = transition.assigneeId === currentUser?.id;
-                  const available = transition.srcStage.id === currentStageId;
-                  const canPerform = (isAssignee || isAdmin) && available;
+                return (
+                  <li
+                    key={transition.id}
+                    className="flex flex-wrap items-center gap-3 px-5 py-3"
+                  >
+                    <TransitionLabel transition={transition} />
 
-                  return (
-                    <li
-                      key={transition.id}
-                      className="flex flex-wrap items-center gap-3 px-5 py-3"
-                    >
-                      <TransitionLabel transition={transition} />
+                    {waitingOnYou.has(transition.id) ? (
+                      <Badge tone="sky">Waiting on you</Badge>
+                    ) : null}
 
-                      {transition.assigneeName ? (
-                        <span className="flex shrink-0 items-center gap-2.5">
-                          <Avatar
-                            name={transition.assigneeName}
-                            className="h-8 w-8 text-xs"
-                          />
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium">
-                              {transition.assigneeName}
-                            </span>
-                            <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                              {transition.allowAttachments
-                                ? "Attachments allowed"
-                                : "No attachments"}
-                            </span>
+                    {transition.assigneeName ? (
+                      <span className="flex shrink-0 items-center gap-2.5">
+                        <Avatar
+                          name={transition.assigneeName}
+                          className="h-8 w-8 text-xs"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">
+                            {transition.assigneeName}
+                          </span>
+                          <span className="block truncate text-xs text-muted">
+                            {transition.allowAttachments
+                              ? "Attachments allowed"
+                              : "No attachments"}
                           </span>
                         </span>
-                      ) : (
-                        <Muted>Unassigned</Muted>
-                      )}
+                      </span>
+                    ) : (
+                      <Muted>Unassigned</Muted>
+                    )}
 
-                      <div className="ml-auto flex shrink-0 items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          className="px-3 py-1.5 text-xs"
-                          disabled={!isAdmin}
-                          title={isAdmin ? undefined : "Admins only"}
-                          onClick={() => setAssignTarget(transition)}
-                        >
-                          {transition.assigneeId ? "Reassign" : "Assign"}
-                        </Button>
+                    <div className="ml-auto flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        className="px-3 py-1.5 text-xs"
+                        disabled={!isAdmin}
+                        title={isAdmin ? undefined : "Admins only"}
+                        onClick={() => setAssignTarget(transition)}
+                      >
+                        {transition.assigneeId ? "Reassign" : "Assign"}
+                      </Button>
+                      {performedOn ? (
+                        <Badge tone="green">
+                          {performedByYou.has(transition.id)
+                            ? "Performed by you"
+                            : "Performed"}{" "}
+                          {formatDate(performedOn)}
+                        </Badge>
+                      ) : (
                         <Button
                           className="px-3 py-1.5 text-xs"
                           disabled={!canPerform}
@@ -263,144 +411,93 @@ export default function ProductDetailPage({
                         >
                           Perform
                         </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
-
-          <Card className="overflow-hidden">
-            <CardHeader title="History" />
-
-            {historyError ? (
-              <div className="p-5">
-                <ErrorNote message={historyError} />
-              </div>
-            ) : historyLoading ? (
-              <div className="flex justify-center py-10 text-slate-400">
-                <Spinner className="h-5 w-5" />
-              </div>
-            ) : history.length === 0 ? (
-              <EmptyState
-                title="Nothing performed yet"
-                description="Transitions performed on this product will be listed here."
-              />
-            ) : (
-              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                {history.map((entry) => (
-                  <li key={entry.id} className="flex gap-3 px-5 py-4">
-                    <Avatar
-                      name={entry.performedByName}
-                      className="h-8 w-8 text-xs"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm">
-                        <span className="font-medium">
-                          {entry.performedByName}
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400">
-                          {" "}
-                          moved {stageName(entry.srcStageId)} →{" "}
-                          {stageName(entry.destStageId)}
-                        </span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        {entry.performedByEmail} ·{" "}
-                        {formatDateTime(entry.performedAt)}
-                      </p>
-
-                      {entry.attachments.length > 0 ? (
-                        <ul className="mt-2 space-y-1">
-                          {entry.attachments.map((attachment) => (
-                            <li key={attachment.id}>
-                              <button
-                                onClick={() =>
-                                  openAttachment(entry.id, attachment.id)
-                                }
-                                className="text-xs font-medium text-sky-600 transition hover:text-sky-500 dark:text-sky-400"
-                              >
-                                {attachment.fileName}
-                                <span className="ml-1.5 font-normal text-slate-400">
-                                  {formatBytes(attachment.sizeBytes)}
-                                </span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
+                      )}
                     </div>
                   </li>
-                ))}
-              </ul>
-            )}
-
-            {attachmentError ? (
-              <div className="px-5 pb-5">
-                <ErrorNote message={attachmentError} />
-              </div>
-            ) : null}
-          </Card>
+                );
+              })}
+            </ul>
+          )}
         </div>
+      </Card>
 
-        <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-          <Card>
-            <CardHeader title="Summary" />
-            <DetailGrid columns={1}>
-              <DetailItem label="Customer">
-                {resolvedCustomer ? (
-                  <Link
-                    href={`/dashboard/customers/${selected.customerId}`}
-                    className="text-sky-600 transition hover:text-sky-500 dark:text-sky-400"
-                  >
-                    {resolvedCustomer.name}
-                  </Link>
-                ) : (
-                  <Muted>Not available</Muted>
-                )}
-              </DetailItem>
+      <Card className="overflow-hidden">
+        <CardHeader title="History" />
+        <div>
+          {historyError ? (
+            <div className="p-5">
+              <ErrorNote message={historyError} />
+            </div>
+          ) : historyLoading ? (
+            <div className="flex justify-center py-10 text-subtle">
+              <Spinner className="h-5 w-5" />
+            </div>
+          ) : history.length === 0 ? (
+            <EmptyState
+              title="Nothing performed yet"
+              description="Transitions performed on this product will be listed here."
+            />
+          ) : (
+            <ul className="divide-y divide-border-subtle">
+              {history.map((entry) => (
+                <li key={entry.id} className="flex gap-3 px-5 py-4">
+                  <Avatar
+                    name={entry.performedByName}
+                    className="h-8 w-8 text-xs"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <span className="font-medium">
+                        {entry.performedByName}
+                      </span>
+                      <span className="text-muted">
+                        {" "}
+                        moved {stageName(entry.srcStageId)} →{" "}
+                        {stageName(entry.destStageId)}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {entry.performedByEmail} ·{" "}
+                      {formatDateTime(entry.performedAt)}
+                    </p>
 
-              <DetailItem label="Workflow template">
-                {template ? (
-                  <Link
-                    href={`/dashboard/workflow-templates/${selected.workflowTemplateId}`}
-                    className="text-sky-600 transition hover:text-sky-500 dark:text-sky-400"
-                  >
-                    {template.name}
-                  </Link>
-                ) : (
-                  <Muted>Not available</Muted>
-                )}
-              </DetailItem>
+                    {entry.attachments.length > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {entry.attachments.map((attachment) => (
+                          <li key={attachment.id}>
+                            <button
+                              onClick={() =>
+                                openAttachment(entry.id, attachment.id)
+                              }
+                              className="text-xs font-medium text-primary transition hover:text-primary-hover"
+                            >
+                              {attachment.fileName}
+                              <span className="ml-1.5 font-normal text-subtle">
+                                {formatBytes(attachment.sizeBytes)}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
-              <DetailItem label="Template version">
-                <Badge>v{selected.workflowTemplateVersion}</Badge>
-              </DetailItem>
-
-              <DetailItem label="Current stage">
-                {currentStageId ? (
-                  stageName(currentStageId)
-                ) : (
-                  <Muted>Not started</Muted>
-                )}
-              </DetailItem>
-
-              <DetailItem label="Status">
-                <StatusBadge active={selected.isActive} />
-              </DetailItem>
-
-              <DetailItem label="Created">
-                {formatDate(selected.createdAt)}
-              </DetailItem>
-
-              <DetailItem label="Description">
-                {selected.description}
-              </DetailItem>
-            </DetailGrid>
-          </Card>
-        </aside>
-      </div>
+          {attachmentError ? (
+            <div className="px-5 pb-5">
+              <ErrorNote message={attachmentError} />
+            </div>
+          ) : null}
+          {attachmentError ? (
+            <div className="px-5 pb-5">
+              <ErrorNote message={attachmentError} />
+            </div>
+          ) : null}
+        </div>
+      </Card>
 
       <AssignTransitionModal
         key={`assign-${assignTarget?.id}-${assignTarget?.assigneeId}`}
@@ -410,6 +507,10 @@ export default function ProductDetailPage({
       />
 
       <PerformTransitionModal
+        onPerformed={() => {
+          dispatch(fetchMyPendingTransitions());
+          dispatch(fetchMyPerformedTransitions());
+        }}
         key={`perform-${performTarget?.id}`}
         productId={id}
         transition={performTarget}

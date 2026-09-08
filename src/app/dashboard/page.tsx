@@ -2,7 +2,12 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { BoxIcon, BuildingIcon, UsersIcon } from "@/components/icons";
+import {
+  BoxIcon,
+  BuildingIcon,
+  InboxIcon,
+  UsersIcon,
+} from "@/components/icons";
 import {
   Avatar,
   Badge,
@@ -20,6 +25,7 @@ import {
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchCustomers } from "@/store/customersSlice";
+import { fetchMyPendingTransitions } from "@/store/productWorkflowSlice";
 import { fetchProducts } from "@/store/productsSlice";
 import { fetchUsers } from "@/store/usersSlice";
 
@@ -29,12 +35,16 @@ export default function DashboardPage() {
   const users = useAppSelector((state) => state.users);
   const customers = useAppSelector((state) => state.customers);
   const products = useAppSelector((state) => state.products);
+  const { pending, pendingLoading } = useAppSelector(
+    (state) => state.productWorkflow,
+  );
 
   // Small page size: the tiles only need meta.total, the list only the newest few.
   useEffect(() => {
     dispatch(fetchUsers({ page: 1, limit: 5 }));
     dispatch(fetchCustomers({ page: 1, limit: 5 }));
     dispatch(fetchProducts({ page: 1, limit: 5 }));
+    dispatch(fetchMyPendingTransitions());
   }, [dispatch]);
 
   if (!user) return null;
@@ -47,6 +57,14 @@ export default function DashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatTile
+          label="Waiting on you"
+          value={pending.length}
+          loading={pendingLoading}
+          hint="Transitions assigned to you"
+          icon={<InboxIcon className="h-4 w-4" />}
+          href="/dashboard/my-work"
+        />
         <StatTile
           label="Customers"
           value={customers.meta?.total}
@@ -74,7 +92,10 @@ export default function DashboardPage() {
         <Tile label="Your role" hint="Access level">
           <Badge tone="sky">{user.role}</Badge>
         </Tile>
-        <Tile label="Account" hint={`Member since ${formatDate(user.createdAt)}`}>
+        <Tile
+          label="Account"
+          hint={`Member since ${formatDate(user.createdAt)}`}
+        >
           <StatusBadge active={user.isActive} />
         </Tile>
       </div>
@@ -87,7 +108,7 @@ export default function DashboardPage() {
           action={
             <Link
               href="/dashboard/customers"
-              className="text-xs font-medium text-sky-600 transition hover:text-sky-500 dark:text-sky-400"
+              className="text-xs font-medium text-primary transition hover:text-primary-hover"
             >
               View all
             </Link>
@@ -95,11 +116,11 @@ export default function DashboardPage() {
         />
 
         {customers.loading ? (
-          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          <ul className="divide-y divide-border-subtle">
             {Array.from({ length: 3 }).map((_, index) => (
               <li key={index} className="flex items-center gap-3 px-5 py-3.5">
-                <span className="h-9 w-9 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
-                <span className="h-3.5 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                <span className="h-9 w-9 animate-pulse rounded-full bg-surface-muted" />
+                <span className="h-3.5 w-40 animate-pulse rounded bg-surface-muted" />
               </li>
             ))}
           </ul>
@@ -109,21 +130,23 @@ export default function DashboardPage() {
             description="Add your first customer to see it here."
           />
         ) : (
-          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          <ul className="divide-y divide-border-subtle">
             {customers.items.map((customer) => (
               <li
                 key={customer.id}
-                className="flex items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                className="flex items-center gap-3 px-5 py-3.5 transition hover:bg-surface-muted"
               >
                 <Avatar name={customer.name} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{customer.name}</p>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                  <p className="truncate text-sm font-medium">
+                    {customer.name}
+                  </p>
+                  <p className="truncate text-xs text-muted">
                     {customer.email}
                   </p>
                 </div>
                 <Badge>{customer.type}</Badge>
-                <span className="hidden w-24 text-right text-xs text-slate-500 sm:block dark:text-slate-400">
+                <span className="hidden w-24 text-right text-xs text-muted sm:block">
                   {formatDate(customer.createdAt)}
                 </span>
               </li>
@@ -141,9 +164,7 @@ export default function DashboardPage() {
             {formatDate(user.updatedAt)}
           </DetailItem>
           <DetailItem label="User ID">
-            <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-              {user.id}
-            </span>
+            <span className="font-mono text-xs text-muted">{user.id}</span>
           </DetailItem>
         </DetailGrid>
       </Card>
@@ -167,15 +188,13 @@ function Tile({
   return (
     <div className={cn(cardClass, "p-4", className)}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
           {label}
         </p>
-        {icon ? <span className="text-slate-400 dark:text-slate-500">{icon}</span> : null}
+        {icon ? <span className="text-subtle">{icon}</span> : null}
       </div>
       <div className="mt-3 flex h-9 items-center">{children}</div>
-      <p className="mt-1.5 truncate text-xs text-slate-400 dark:text-slate-500">
-        {hint}
-      </p>
+      <p className="mt-1.5 truncate text-xs text-subtle">{hint}</p>
     </div>
   );
 }
@@ -198,11 +217,11 @@ function StatTile({
   return (
     <Link
       href={href}
-      className="rounded-xl transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-500/20"
+      className="rounded-xl transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-ring/25"
     >
       <Tile label={label} hint={hint} icon={icon} className="h-full">
         {loading && value === undefined ? (
-          <span className="h-7 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          <span className="h-7 w-16 animate-pulse rounded bg-surface-muted" />
         ) : (
           <p className="text-3xl font-semibold tabular-nums tracking-tight">
             {(value ?? 0).toLocaleString()}

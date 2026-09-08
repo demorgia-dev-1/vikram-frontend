@@ -1,22 +1,134 @@
 @import "tailwindcss";
 
-/* Drive dark mode from a class on <html> so the sidebar toggle can control it,
-   instead of Tailwind's default prefers-color-scheme behaviour. */
+/* ==========================================================================
+   Vikram Aviation — design tokens
+   Light palette on :root; only the tokens change in dark mode. The theme is
+   driven by a class on <html> so the sidebar toggle can control it.
+   ========================================================================== */
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Keeps native UI (scrollbars, select popups, autofill) light too. */
+  color-scheme: light;
+
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-raised: #ffffff;
+
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --muted: #64748b;
+  --subtle: #94a3b8;
+
+  --primary: #1e40af;
+  --primary-hover: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --primary-soft: #eff6ff;
+
+  --accent: #0891b2;
+
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --info: #0369a1;
+  --info-soft: #f0f9ff;
+
+  --sidebar: #0f172a;
+  --sidebar-foreground: #cbd5e1;
+  --sidebar-muted: #64748b;
+  --sidebar-active: #1e293b;
+  --sidebar-border: #1e293b;
+
+  --ring: #3b82f6;
 }
 
 .dark {
+  color-scheme: dark;
+
   --background: #020617;
-  --foreground: #ededed;
+  --foreground: #e2e8f0;
+
+  --surface: #0f172a;
+  --surface-muted: #0b1222;
+  --surface-raised: #1e293b;
+
+  --border: #1e293b;
+  --border-strong: #334155;
+
+  --muted: #94a3b8;
+  --subtle: #64748b;
+
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-foreground: #020617;
+  --primary-soft: #172554;
+
+  --accent: #22d3ee;
+
+  --success: #4ade80;
+  --success-soft: #052e16;
+  --warning: #fbbf24;
+  --warning-soft: #451a03;
+  --danger: #f87171;
+  --danger-soft: #450a0a;
+  --info: #38bdf8;
+  --info-soft: #082f49;
+
+  --sidebar: #0b1222;
+  --sidebar-foreground: #cbd5e1;
+  --sidebar-muted: #64748b;
+  --sidebar-active: #1e293b;
+  --sidebar-border: #1e293b;
+
+  --ring: #60a5fa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+
+  --color-border-subtle: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-accent: var(--accent);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-ring: var(--ring);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -24,5 +136,46 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Tailwind v4's preflight sets cursor:default on buttons; restore the pointer
+   for anything clickable, while disabled controls keep the default arrow. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  select:not(:disabled),
+  input[type="file"]:not(:disabled)::file-selector-button {
+    cursor: pointer;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

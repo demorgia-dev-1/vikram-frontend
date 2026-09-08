@@ -9,21 +9,37 @@ export function cn(...values: Array<string | false | null | undefined>) {
 /* ---------- shared surface tokens ---------- */
 
 export const cardClass =
-  "rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900";
+  "rounded-xl border border-border-subtle bg-surface shadow-sm";
 
 export const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-400/15";
+  "w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-subtle hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-ring/25 disabled:cursor-not-allowed disabled:opacity-60";
 
-export const labelClass =
-  "block text-sm font-medium text-slate-700 dark:text-slate-300";
+export const labelClass = "block text-sm font-medium text-foreground";
 
 /* ---------- primitives ---------- */
 
 export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={cn("animate-spin", className)} fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth={3} className="opacity-25" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth={3} strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={cn("animate-spin", className)}
+      fill="none"
+      aria-hidden
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth={3}
+        className="opacity-25"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth={3}
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -43,11 +59,10 @@ export function Button({
 }: ButtonProps) {
   const variants = {
     primary:
-      "bg-sky-600 text-white shadow-sm hover:bg-sky-500 focus-visible:ring-sky-500/30",
+      "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
     secondary:
-      "border border-slate-300 text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-400/30 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800",
-    ghost:
-      "text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-400/30 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+      "border border-border-subtle bg-surface text-foreground hover:bg-surface-muted hover:border-border-strong",
+    ghost: "text-muted hover:bg-surface-muted hover:text-foreground",
   };
 
   return (
@@ -78,10 +93,8 @@ export function IconButton({
   tone?: "default" | "danger";
 }) {
   const tones = {
-    default:
-      "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
-    danger:
-      "text-slate-500 hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400",
+    default: "text-muted hover:bg-surface-muted hover:text-foreground",
+    danger: "text-muted hover:bg-danger-soft hover:text-danger",
   };
 
   return (
@@ -90,7 +103,7 @@ export function IconButton({
       title={label}
       aria-label={label}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-lg transition focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40",
+        "inline-flex h-8 w-8 items-center justify-center rounded-lg transition focus:outline-none focus-visible:ring-4 focus-visible:ring-ring/25 disabled:cursor-not-allowed disabled:opacity-40",
         tones[tone],
         className,
       )}
@@ -119,7 +132,7 @@ export function CardHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-3.5 dark:border-slate-800">
+    <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3.5">
       <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
       {action}
     </div>
@@ -142,9 +155,7 @@ export function PageHeader({
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {description}
-          </p>
+          <p className="mt-1 text-sm text-muted">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -181,11 +192,9 @@ export function Badge({
   tone?: "slate" | "sky" | "green";
 }) {
   const tones = {
-    slate:
-      "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
-    sky: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20",
-    green:
-      "bg-green-50 text-green-700 ring-green-200 dark:bg-green-500/10 dark:text-green-300 dark:ring-green-500/20",
+    slate: "bg-surface-muted text-muted ring-border-subtle",
+    sky: "bg-primary-soft text-primary ring-primary/20",
+    green: "bg-success-soft text-success ring-success/20",
   };
 
   return (
@@ -207,14 +216,14 @@ export function StatusBadge({ active }: { active: boolean }) {
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
         active
-          ? "bg-green-50 text-green-700 ring-green-200 dark:bg-green-500/10 dark:text-green-300 dark:ring-green-500/20"
-          : "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700",
+          ? "bg-success-soft text-success ring-success/20"
+          : "bg-surface-muted text-muted ring-border-subtle",
       )}
     >
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",
-          active ? "bg-green-500" : "bg-slate-400",
+          active ? "bg-success" : "bg-subtle",
         )}
         aria-hidden
       />
@@ -227,7 +236,7 @@ export function ErrorNote({ message }: { message: string }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+      className="flex items-start gap-2 rounded-lg border border-danger/25 bg-danger-soft px-3.5 py-2.5 text-sm text-danger"
     >
       <svg
         viewBox="0 0 24 24"
@@ -256,9 +265,7 @@ export function EmptyState({
     <div className="px-5 py-14 text-center">
       <p className="text-sm font-medium">{title}</p>
       {description ? (
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {description}
-        </p>
+        <p className="mt-1 text-sm text-muted">{description}</p>
       ) : null}
     </div>
   );
@@ -267,18 +274,24 @@ export function EmptyState({
 /* ---------- table ---------- */
 
 export const thClass =
-  "px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400";
+  "px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted";
 
 export const tdClass = "px-5 py-3.5 align-middle";
 
-export function TableSkeleton({ rows = 5, cols }: { rows?: number; cols: number }) {
+export function TableSkeleton({
+  rows = 5,
+  cols,
+}: {
+  rows?: number;
+  cols: number;
+}) {
   return (
     <>
       {Array.from({ length: rows }).map((_, row) => (
         <tr key={row}>
           {Array.from({ length: cols }).map((__, col) => (
             <td key={col} className={tdClass}>
-              <span className="block h-3.5 w-full max-w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+              <span className="block h-3.5 w-full max-w-32 animate-pulse rounded bg-surface-muted" />
             </td>
           ))}
         </tr>
@@ -300,14 +313,17 @@ export function Pagination({
   const to = Math.min(meta.page * meta.limit, meta.total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-5 py-3">
+      <p className="text-xs text-muted">
         {meta.total === 0 ? (
           "No results"
         ) : (
           <>
-            Showing <span className="font-medium text-slate-700 dark:text-slate-300">{from}–{to}</span> of{" "}
-            <span className="font-medium text-slate-700 dark:text-slate-300">{meta.total}</span>
+            Showing{" "}
+            <span className="font-medium text-foreground">
+              {from}–{to}
+            </span>{" "}
+            of <span className="font-medium text-foreground">{meta.total}</span>
           </>
         )}
       </p>
@@ -320,7 +336,7 @@ export function Pagination({
         >
           Previous
         </Button>
-        <span className="px-1 text-xs text-slate-500 dark:text-slate-400">
+        <span className="px-1 text-xs text-muted">
           Page {meta.page} of {meta.totalPages || 1}
         </span>
         <Button
@@ -348,7 +364,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-sky-100 font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+        "flex shrink-0 items-center justify-center rounded-full bg-primary-soft font-semibold text-primary",
         className,
       )}
       aria-hidden
@@ -358,37 +374,117 @@ export function Avatar({
   );
 }
 
-/** Identity band at the top of a detail page: avatar, title, subtitle, badges. */
+/** Identity band at the top of a detail page: icon or avatar, title, meta, badges. */
 export function DetailHero({
   name,
   subtitle,
+  meta,
+  icon,
   badges,
 }: {
   name: string;
   subtitle?: React.ReactNode;
+  /** Short inline facts under the title, e.g. customer · template · v1. */
+  meta?: React.ReactNode[];
+  icon?: React.ReactNode;
   badges?: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
         cardClass,
-        "flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6",
+        "flex flex-wrap items-center gap-x-4 gap-y-3 p-5",
       )}
     >
-      <Avatar name={name} className="h-12 w-12 text-lg" />
+      {icon ? (
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          {icon}
+        </span>
+      ) : (
+        <Avatar name={name} className="h-11 w-11 text-base" />
+      )}
+
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+        <h2 className="truncate text-lg font-semibold tracking-tight">
           {name}
         </h2>
         {subtitle ? (
-          <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-            {subtitle}
+          <p className="truncate text-sm text-muted">{subtitle}</p>
+        ) : null}
+        {meta && meta.length > 0 ? (
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+            {meta.map((item, index) => (
+              <span key={index} className="flex items-center gap-2">
+                {index > 0 ? (
+                  <span className="text-subtle" aria-hidden>
+                    ·
+                  </span>
+                ) : null}
+                {item}
+              </span>
+            ))}
           </p>
         ) : null}
       </div>
+
       {badges ? (
         <div className="flex flex-wrap items-center gap-2">{badges}</div>
       ) : null}
+    </div>
+  );
+}
+
+/** Underline tab bar. Sections render on demand rather than all at once. */
+export function Tabs({
+  tabs,
+  active,
+  onChange,
+  className,
+}: {
+  tabs: { id: string; label: string; count?: number }[];
+  active: string;
+  onChange: (id: string) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn("border-b border-border-subtle", className)}
+      role="tablist"
+    >
+      <nav className="-mb-px flex gap-5 overflow-x-auto px-5">
+        {tabs.map((tab) => {
+          const selected = tab.id === active;
+
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={selected}
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "flex shrink-0 items-center gap-2 border-b-2 px-1 pb-3 pt-3.5 text-sm font-medium transition",
+                selected
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted hover:border-border-strong hover:text-foreground",
+              )}
+            >
+              {tab.label}
+              {tab.count !== undefined ? (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                    selected
+                      ? "bg-primary-soft text-primary"
+                      : "bg-surface-muted text-muted",
+                  )}
+                >
+                  {tab.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
@@ -430,7 +526,7 @@ export function DetailItem({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted">
         {label}
       </dt>
       <dd className="mt-1 break-words text-sm font-medium">{children}</dd>
@@ -440,11 +536,7 @@ export function DetailItem({
 
 /** Placeholder for a value that could not be resolved to something readable. */
 export function Muted({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-normal text-slate-400 dark:text-slate-500">
-      {children}
-    </span>
-  );
+  return <span className="font-normal text-subtle">{children}</span>;
 }
 
 /** `src → dest`, used wherever a workflow transition is named. */
@@ -463,7 +555,7 @@ export function TransitionLabel({
       )}
     >
       <span className="truncate">{transition.srcStage.name}</span>
-      <span className="shrink-0 text-slate-400" aria-hidden>
+      <span className="shrink-0 text-subtle" aria-hidden>
         →
       </span>
       <span className="truncate">{transition.destStage.name}</span>

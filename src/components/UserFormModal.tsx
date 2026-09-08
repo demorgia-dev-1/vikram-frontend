@@ -4,26 +4,37 @@ import { useState } from "react";
 import Modal from "@/components/Modal";
 import { Button, ErrorNote, Field, inputClass } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { updateUser } from "@/store/usersSlice";
+import { showToast } from "@/store/toastSlice";
+import { createUser, updateUser } from "@/store/usersSlice";
 import { ROLES, type User, type UserPayload } from "@/types";
 
 export default function UserFormModal({
+  open,
   user,
   onClose,
   onSaved,
 }: {
-  user: User | null;
+  /** Create mode is driven by `open`; edit mode by a non-null `user`. */
+  open?: boolean;
+  user?: User | null;
   onClose: () => void;
   onSaved?: () => void;
 }) {
   const dispatch = useAppDispatch();
-  const { updating, updateError } = useAppSelector((state) => state.users);
+  const { creating, createError, updating, updateError } = useAppSelector(
+    (state) => state.users,
+  );
+
+  const editing = Boolean(user);
+  const saving = editing ? updating : creating;
+  const error = editing ? updateError : createError;
 
   const [form, setForm] = useState<UserPayload>({
     name: user?.name ?? "",
     email: user?.email ?? "",
     role: user?.role ?? "USER",
   });
+  const [password, setPassword] = useState("");
 
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -34,11 +45,16 @@ export default function UserFormModal({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user) return;
+    const result = user
+      ? await dispatch(updateUser({ id: user.id, payload: form }))
+      : await dispatch(createUser({ ...form, password }));
 
-    const result = await dispatch(updateUser({ id: user.id, payload: form }));
+    const ok = user
+      ? updateUser.fulfilled.match(result)
+      : createUser.fulfilled.match(result);
 
-    if (updateUser.fulfilled.match(result)) {
+    if (ok) {
+      dispatch(showToast(user ? `${form.name} updated` : `${form.name} added`));
       onSaved?.();
       onClose();
     }
@@ -46,24 +62,28 @@ export default function UserFormModal({
 
   return (
     <Modal
-      open={Boolean(user)}
-      title="Edit user"
-      description="Update this account's name, email and role."
+      open={Boolean(user) || Boolean(open)}
+      title={editing ? "Edit user" : "New user"}
+      description={
+        editing
+          ? "Update this account's name, email and role."
+          : "Creates a portal account with an initial password."
+      }
       onClose={onClose}
       size="sm"
-      closeDisabled={updating}
+      closeDisabled={saving}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={updating}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" form="user-form" loading={updating}>
-            {updating ? "Saving…" : "Save changes"}
+          <Button type="submit" form="user-form" loading={saving}>
+            {saving ? "Saving…" : editing ? "Save changes" : "Create user"}
           </Button>
         </>
       }
     >
-      {user ? (
+      {Boolean(user) || open ? (
         <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
           <Field label="Name" htmlFor="user-name">
             <input
@@ -73,7 +93,7 @@ export default function UserFormModal({
               placeholder="Jane Doe"
               value={form.name}
               onChange={handleChange}
-              disabled={updating}
+              disabled={saving}
               className={inputClass}
             />
           </Field>
@@ -87,7 +107,7 @@ export default function UserFormModal({
               placeholder="jane.doe@vikramaviation.com"
               value={form.email}
               onChange={handleChange}
-              disabled={updating}
+              disabled={saving}
               className={inputClass}
             />
           </Field>
@@ -98,7 +118,7 @@ export default function UserFormModal({
               name="role"
               value={form.role}
               onChange={handleChange}
-              disabled={updating}
+              disabled={saving}
               className={inputClass}
             >
               {ROLES.map((role) => (
@@ -109,7 +129,24 @@ export default function UserFormModal({
             </select>
           </Field>
 
-          {updateError ? <ErrorNote message={updateError} /> : null}
+          {editing ? null : (
+            <Field label="Initial password" htmlFor="user-password">
+              <input
+                id="user-password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={saving}
+                className={inputClass}
+              />
+            </Field>
+          )}
+
+          {error ? <ErrorNote message={error} /> : null}
         </form>
       ) : null}
     </Modal>

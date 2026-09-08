@@ -2,35 +2,44 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ConfirmModal } from "@/components/Modal";
+import StageFormModal from "@/components/StageFormModal";
+import TemplateFormModal from "@/components/TemplateFormModal";
+import TransitionFormModal from "@/components/TransitionFormModal";
+import VersionSnapshotModal from "@/components/VersionSnapshotModal";
 import WorkflowGraph from "@/components/WorkflowGraph";
+import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import {
-  Badge,
+  Button,
   Card,
-  CardHeader,
-  DetailGrid,
-  DetailHero,
-  DetailItem,
-  EmptyState,
   ErrorNote,
   Spinner,
-  TransitionLabel,
-  cn,
-  formatDate,
+  formatDateTime,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
+  clearSaveError,
   clearSelectedTemplate,
+  createTransition,
+  deleteStage,
+  deleteTemplate,
+  deleteTransition,
   fetchTemplateById,
   fetchTemplateVersion,
   fetchTemplateVersions,
+  publishTemplate,
 } from "@/store/workflowTemplatesSlice";
+import { showToast } from "@/store/toastSlice";
 import type { WorkflowStage, WorkflowTransition } from "@/types";
 
 export default function WorkflowTemplateDetailPage({
   params,
 }: PageProps<"/dashboard/workflow-templates/[id]">) {
   const { id } = use(params);
+  const router = useRouter();
   const dispatch = useAppDispatch();
+  const role = useAppSelector((state) => state.auth.user?.role);
   const {
     selected,
     selectedLoading,
@@ -38,12 +47,22 @@ export default function WorkflowTemplateDetailPage({
     versions,
     versionsLoading,
     versionsError,
-    version: graph,
-    versionLoading,
-    versionError,
+    saving,
+    saveError,
   } = useAppSelector((state) => state.workflowTemplates);
 
-  const [openVersion, setOpenVersion] = useState<number | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState(false);
+  const [stageForm, setStageForm] = useState<
+    { mode: "create" } | { mode: "edit"; stage: WorkflowStage } | null
+  >(null);
+  const [addingTransition, setAddingTransition] = useState(false);
+  const [pendingStageDelete, setPendingStageDelete] =
+    useState<WorkflowStage | null>(null);
+  const [pendingTransitionDelete, setPendingTransitionDelete] =
+    useState<WorkflowTransition | null>(null);
+  const [pendingTemplateDelete, setPendingTemplateDelete] = useState(false);
+  const [pendingPublish, setPendingPublish] = useState(false);
+  const [viewingVersion, setViewingVersion] = useState<number | null>(null);
 
   useEffect(() => {
     dispatch(fetchTemplateById(id));
@@ -53,31 +72,23 @@ export default function WorkflowTemplateDetailPage({
     };
   }, [dispatch, id]);
 
-  function showVersion(version: number) {
-    if (openVersion === version) {
-      setOpenVersion(null);
-      return;
-    }
-
-    setOpenVersion(version);
-    dispatch(fetchTemplateVersion({ id, version }));
-  }
-
-  if (selectedLoading) {
+  if (selectedLoading && !selected) {
     return (
-      <div className="flex justify-center py-20 text-slate-400">
+      <div className="flex justify-center py-20 text-subtle">
         <Spinner className="h-6 w-6" />
       </div>
     );
   }
 
-  if (selectedError) {
+  if (!selected) {
     return (
       <div className="space-y-4">
-        <ErrorNote message={selectedError} />
+        <ErrorNote
+          message={selectedError ?? "This template could not be loaded."}
+        />
         <Link
           href="/dashboard/workflow-templates"
-          className="text-sm font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400"
+          className="text-sm font-medium text-primary hover:text-primary-hover"
         >
           ← Back to workflow templates
         </Link>
@@ -85,217 +96,364 @@ export default function WorkflowTemplateDetailPage({
     );
   }
 
-  if (!selected) return null;
+  const isAdmin = role === "ADMIN";
+  const stages = selected.stages;
+  const transitions = selected.transitions;
+  // Versions come back newest first, so the head is the highest number.
+  const nextVersion = (versions[0]?.version ?? 0) + 1;
+
+  function open(action: () => void) {
+    dispatch(clearSaveError());
+    action();
+  }
 
   return (
-    <div className="space-y-5">
-      <DetailHero
-        name={selected.name}
-        subtitle={selected.description}
-        badges={
-          <Badge>
-            {versions.length} version{versions.length === 1 ? "" : "s"}
-          </Badge>
-        }
-      />
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-5">
-          {selected.stages.length > 0 ? (
-            <Card className="overflow-hidden">
-              <CardHeader title="Current draft" />
-              <WorkflowGraph
-                stages={selected.stages}
-                transitions={selected.transitions}
-              />
-            </Card>
-          ) : null}
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Card>
-              <CardHeader title={`Stages (${selected.stages.length})`} />
-              <StageList stages={selected.stages} />
-            </Card>
-
-            <Card>
-              <CardHeader
-                title={`Transitions (${selected.transitions.length})`}
-              />
-              <TransitionList transitions={selected.transitions} />
-            </Card>
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {selected.name}
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-muted">
+            {selected.description || "No description."}
+          </p>
         </div>
 
-        <aside className="lg:sticky lg:top-20 lg:self-start">
-          <Card>
-            <CardHeader title="Summary" />
-            <DetailGrid columns={1}>
-              <DetailItem label="Description">
-                {selected.description}
-              </DetailItem>
-              <DetailItem label="Stages">{selected.stages.length}</DetailItem>
-              <DetailItem label="Transitions">
-                {selected.transitions.length}
-              </DetailItem>
-              <DetailItem label="Created">
-                {formatDate(selected.createdAt)}
-              </DetailItem>
-              <DetailItem label="Updated">
-                {formatDate(selected.updatedAt)}
-              </DetailItem>
-              <DetailItem label="Template ID">
-                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                  {selected.id}
-                </span>
-              </DetailItem>
-            </DetailGrid>
-          </Card>
-        </aside>
+        {isAdmin ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => open(() => setEditingTemplate(true))}
+            >
+              <PencilIcon className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              disabled={stages.length === 0}
+              title={
+                stages.length === 0
+                  ? "Add at least one stage before publishing"
+                  : `Freeze the current draft as version ${nextVersion}`
+              }
+              onClick={() => open(() => setPendingPublish(true))}
+            >
+              Publish
+            </Button>
+            <Button
+              variant="secondary"
+              aria-label="Delete template"
+              title="Delete this template and its stages"
+              className="px-2.5 text-muted hover:border-danger hover:bg-danger-soft hover:text-danger"
+              onClick={() => open(() => setPendingTemplateDelete(true))}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : null}
       </div>
 
-      <Card>
-        <CardHeader title="Published versions" />
+      {selectedError ? <ErrorNote message={selectedError} /> : null}
+
+      {/* Flow: stages as nodes, transitions as edges */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
+          <div>
+            <h2 className="text-sm font-semibold">Flow</h2>
+            <p className="text-xs text-muted">
+              {stages.length} stage{stages.length === 1 ? "" : "s"},{" "}
+              {transitions.length} transition
+              {transitions.length === 1 ? "" : "s"}.
+              {isAdmin ? (
+                <>
+                  {" "}
+                  Drag the{" "}
+                  <span className="inline-flex h-3.5 w-3.5 translate-y-0.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                    +
+                  </span>{" "}
+                  on a stage onto another to connect them, or use Add
+                  transition.
+                </>
+              ) : null}
+            </p>
+          </div>
+
+          {isAdmin ? (
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                variant="secondary"
+                className="px-3 py-1.5 text-xs"
+                disabled={stages.length < 2}
+                title={
+                  stages.length < 2
+                    ? "Add at least two stages first"
+                    : "Connect two stages without dragging"
+                }
+                onClick={() => open(() => setAddingTransition(true))}
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                Add transition
+              </Button>
+              <Button
+                className="px-3 py-1.5 text-xs"
+                onClick={() => open(() => setStageForm({ mode: "create" }))}
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                Add stage
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        <WorkflowGraph
+          stages={stages}
+          transitions={transitions}
+          readOnly={!isAdmin}
+          onEditStage={
+            isAdmin
+              ? (stage) => open(() => setStageForm({ mode: "edit", stage }))
+              : undefined
+          }
+          onDeleteStage={
+            isAdmin
+              ? (stage) => open(() => setPendingStageDelete(stage))
+              : undefined
+          }
+          onDeleteTransition={
+            isAdmin
+              ? (transition) =>
+                  open(() => setPendingTransitionDelete(transition))
+              : undefined
+          }
+          onAddStage={
+            isAdmin
+              ? () => open(() => setStageForm({ mode: "create" }))
+              : undefined
+          }
+          onConnectStages={
+            isAdmin
+              ? async (srcStageId, destStageId) => {
+                  const name = (stageId: string) =>
+                    stages.find((stage) => stage.id === stageId)?.name ??
+                    "stage";
+
+                  const result = await dispatch(
+                    createTransition({
+                      templateId: id,
+                      payload: { srcStageId, destStageId },
+                    }),
+                  );
+
+                  if (createTransition.fulfilled.match(result)) {
+                    dispatch(
+                      showToast(
+                        `${name(srcStageId)} → ${name(destStageId)} added`,
+                      ),
+                    );
+                  }
+                }
+              : undefined
+          }
+        />
+
+        {saveError ? (
+          <p
+            role="alert"
+            className="border-t border-border-subtle bg-danger-soft px-5 py-3 text-sm text-danger"
+          >
+            {saveError}
+          </p>
+        ) : null}
+      </Card>
+
+      {/* Published versions */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
+          <div>
+            <h2 className="text-sm font-semibold">Published versions</h2>
+            <p className="text-xs text-muted">
+              Each publish freezes the draft above. Versions never change.
+            </p>
+          </div>
+          <span className="shrink-0 text-xs tabular-nums text-muted">
+            {versions.length} {versions.length === 1 ? "version" : "versions"}
+          </span>
+        </div>
 
         {versionsError ? (
-          <div className="p-5">
-            <ErrorNote message={versionsError} />
-          </div>
-        ) : versionsLoading ? (
-          <div className="flex justify-center py-10 text-slate-400">
-            <Spinner className="h-5 w-5" />
+          <p
+            role="alert"
+            className="border-b border-border-subtle bg-danger-soft px-5 py-3 text-sm text-danger"
+          >
+            {versionsError}
+          </p>
+        ) : null}
+
+        {versionsLoading && versions.length === 0 ? (
+          <div className="space-y-2 px-5 py-4">
+            <div className="h-8 animate-pulse rounded-lg bg-surface-muted" />
+            <div className="h-8 animate-pulse rounded-lg bg-surface-muted" />
           </div>
         ) : versions.length === 0 ? (
-          <EmptyState
-            title="No published versions"
-            description="Products can only be created against a published version."
-          />
+          <div className="px-5 py-10 text-center">
+            <p className="text-sm text-muted">Not published yet</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-subtle">
+              Publishing captures the current stages and transitions as version
+              1.
+            </p>
+          </div>
         ) : (
-          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-            {versions.map((item) => {
-              const isOpen = openVersion === item.version;
-
-              return (
-                <li key={item.id}>
-                  <button
-                    onClick={() => showVersion(item.version)}
-                    aria-expanded={isOpen}
-                    className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                  >
-                    <Badge tone="sky">v{item.version}</Badge>
-                    <span className="text-sm text-slate-500 dark:text-slate-400">
-                      Published {formatDate(item.publishedAt)}
-                    </span>
-                    <span className="ml-auto text-xs font-medium text-sky-600 dark:text-sky-400">
-                      {isOpen ? "Hide graph" : "View graph"}
-                    </span>
-                  </button>
-
-                  {isOpen ? (
-                    <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/20">
-                      {versionLoading ? (
-                        <div className="flex justify-center py-6 text-slate-400">
-                          <Spinner className="h-5 w-5" />
-                        </div>
-                      ) : versionError ? (
-                        <ErrorNote message={versionError} />
-                      ) : graph?.version === item.version ? (
-                        <div className="space-y-4">
-                          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                            <WorkflowGraph
-                              stages={graph.stages}
-                              transitions={graph.transitions}
-                              className="h-60"
-                            />
-                          </div>
-                          <div className="grid gap-5 lg:grid-cols-2">
-                            <div>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                Stages
-                              </p>
-                              <StageList stages={graph.stages} flush />
-                            </div>
-                            <div>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                Transitions
-                              </p>
-                              <TransitionList
-                                transitions={graph.transitions}
-                                flush
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
+          <ul className="divide-y divide-border-subtle">
+            {versions.map((entry, index) => (
+              <li
+                key={entry.id}
+                className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-muted"
+              >
+                <span className="flex h-7 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-muted px-2 text-[11px] font-semibold tabular-nums">
+                  v{entry.version}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">
+                    {formatDateTime(entry.publishedAt)}
+                  </p>
+                  {index === 0 ? (
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-success">
+                      Latest
+                    </p>
                   ) : null}
-                </li>
-              );
-            })}
+                </div>
+                <Button
+                  variant="secondary"
+                  className="shrink-0 px-2.5 py-1.5 text-xs"
+                  onClick={() => {
+                    setViewingVersion(entry.version);
+                    dispatch(
+                      fetchTemplateVersion({ id, version: entry.version }),
+                    );
+                  }}
+                >
+                  View snapshot
+                </Button>
+              </li>
+            ))}
           </ul>
         )}
       </Card>
+
+      <TemplateFormModal
+        key={`edit-${selected.updatedAt}`}
+        open={editingTemplate}
+        template={selected}
+        onClose={() => setEditingTemplate(false)}
+      />
+
+      <StageFormModal
+        key={
+          stageForm?.mode === "edit"
+            ? `stage-${stageForm.stage.id}`
+            : "stage-new"
+        }
+        open={Boolean(stageForm)}
+        templateId={id}
+        stage={stageForm?.mode === "edit" ? stageForm.stage : null}
+        onClose={() => setStageForm(null)}
+      />
+
+      <TransitionFormModal
+        open={addingTransition}
+        templateId={id}
+        stages={stages}
+        onClose={() => setAddingTransition(false)}
+      />
+
+      <VersionSnapshotModal
+        version={viewingVersion}
+        onClose={() => setViewingVersion(null)}
+      />
+
+      <ConfirmModal
+        open={Boolean(pendingStageDelete)}
+        title="Delete this stage?"
+        message={`${pendingStageDelete?.name ?? "This stage"} will be removed from this template, along with any transitions that use it. This cannot be undone.`}
+        confirmLabel="Delete stage"
+        loadingLabel="Deleting…"
+        loading={saving}
+        error={saveError}
+        onConfirm={async () => {
+          if (!pendingStageDelete) return;
+          const result = await dispatch(
+            deleteStage({ templateId: id, stageId: pendingStageDelete.id }),
+          );
+          if (deleteStage.fulfilled.match(result)) {
+            dispatch(showToast(`Stage “${pendingStageDelete.name}” deleted`));
+            setPendingStageDelete(null);
+          }
+        }}
+        onClose={() => setPendingStageDelete(null)}
+      />
+
+      <ConfirmModal
+        open={Boolean(pendingTransitionDelete)}
+        title="Delete this transition?"
+        message={
+          pendingTransitionDelete
+            ? `${pendingTransitionDelete.srcStage.name} → ${pendingTransitionDelete.destStage.name} will be removed from the draft.`
+            : ""
+        }
+        confirmLabel="Delete transition"
+        loadingLabel="Deleting…"
+        loading={saving}
+        error={saveError}
+        onConfirm={async () => {
+          if (!pendingTransitionDelete) return;
+          const result = await dispatch(
+            deleteTransition({
+              templateId: id,
+              transitionId: pendingTransitionDelete.id,
+            }),
+          );
+          if (deleteTransition.fulfilled.match(result)) {
+            dispatch(showToast("Transition deleted"));
+            setPendingTransitionDelete(null);
+          }
+        }}
+        onClose={() => setPendingTransitionDelete(null)}
+      />
+
+      <ConfirmModal
+        open={pendingPublish}
+        title={`Publish version ${nextVersion}?`}
+        message="This freezes the current stages and transitions as an immutable version. Products created from it always use this snapshot. The draft stays editable."
+        confirmLabel="Publish"
+        loadingLabel="Publishing…"
+        loading={saving}
+        error={saveError}
+        onConfirm={async () => {
+          const result = await dispatch(publishTemplate(id));
+          if (publishTemplate.fulfilled.match(result)) {
+            dispatch(showToast(`Version ${nextVersion} published`));
+            setPendingPublish(false);
+          }
+        }}
+        onClose={() => setPendingPublish(false)}
+      />
+
+      <ConfirmModal
+        open={pendingTemplateDelete}
+        title="Delete this template?"
+        message={`${selected.name} and its draft stages will be permanently deleted. Published versions already in use by products are unaffected.`}
+        confirmLabel="Delete template"
+        loadingLabel="Deleting…"
+        loading={saving}
+        error={saveError}
+        onConfirm={async () => {
+          const result = await dispatch(deleteTemplate(id));
+          if (deleteTemplate.fulfilled.match(result)) {
+            dispatch(showToast(`${selected.name} deleted`));
+            router.replace("/dashboard/workflow-templates");
+          }
+        }}
+        onClose={() => setPendingTemplateDelete(false)}
+      />
     </div>
-  );
-}
-
-function StageList({
-  stages,
-  flush = false,
-}: {
-  stages: WorkflowStage[];
-  flush?: boolean;
-}) {
-  if (stages.length === 0) {
-    return flush ? (
-      <p className="text-sm text-slate-500 dark:text-slate-400">No stages.</p>
-    ) : (
-      <EmptyState title="No stages" />
-    );
-  }
-
-  return (
-    <ul className={cn("space-y-2", !flush && "p-5")}>
-      {stages.map((stage) => (
-        <li
-          key={stage.id}
-          className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-800"
-        >
-          <span className="font-medium">{stage.name}</span>
-          {stage.isInitial ? <Badge tone="green">Initial</Badge> : null}
-          {stage.isTerminal ? <Badge>Terminal</Badge> : null}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function TransitionList({
-  transitions,
-  flush = false,
-}: {
-  transitions: WorkflowTransition[];
-  flush?: boolean;
-}) {
-  if (transitions.length === 0) {
-    return flush ? (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        No transitions.
-      </p>
-    ) : (
-      <EmptyState title="No transitions" />
-    );
-  }
-
-  return (
-    <ul className={cn("space-y-2", !flush && "p-5")}>
-      {transitions.map((transition) => (
-        <li
-          key={transition.id}
-          className="flex items-center rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800"
-        >
-          <TransitionLabel transition={transition} />
-        </li>
-      ))}
-    </ul>
   );
 }

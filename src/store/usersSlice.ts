@@ -1,6 +1,13 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api, { getErrorMessage } from "@/lib/axios";
-import type { ListParams, Meta, Paginated, User, UserPayload } from "@/types";
+import type {
+  CreateUserPayload,
+  ListParams,
+  Meta,
+  Paginated,
+  User,
+  UserPayload,
+} from "@/types";
 
 interface UsersState {
   items: User[];
@@ -10,6 +17,8 @@ interface UsersState {
   selected: User | null;
   selectedLoading: boolean;
   selectedError: string | null;
+  creating: boolean;
+  createError: string | null;
   updating: boolean;
   updateError: string | null;
   deleting: boolean;
@@ -24,6 +33,8 @@ const initialState: UsersState = {
   selected: null,
   selectedLoading: false,
   selectedError: null,
+  creating: false,
+  createError: null,
   updating: false,
   updateError: null,
   deleting: false,
@@ -55,6 +66,19 @@ export const fetchUserById = createAsyncThunk<
     return data;
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, "Could not load user."));
+  }
+});
+
+export const createUser = createAsyncThunk<
+  User,
+  CreateUserPayload,
+  { rejectValue: string }
+>("users/create", async (payload, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post<User>("/users", payload);
+    return data;
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error, "Could not create user."));
   }
 });
 
@@ -125,6 +149,18 @@ const usersSlice = createSlice({
       .addCase(fetchUserById.rejected, (state, action) => {
         state.selectedLoading = false;
         state.selectedError = action.payload ?? "Could not load user.";
+      })
+
+      .addCase(createUser.pending, (state) => {
+        state.creating = true;
+        state.createError = null;
+      })
+      .addCase(createUser.fulfilled, (state) => {
+        state.creating = false;
+      })
+      .addCase(createUser.rejected, (state, action) => {
+        state.creating = false;
+        state.createError = action.payload ?? "Could not create user.";
       })
 
       .addCase(updateUser.pending, (state) => {

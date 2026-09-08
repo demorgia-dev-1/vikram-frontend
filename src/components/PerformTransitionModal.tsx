@@ -12,6 +12,7 @@ import {
   labelClass,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import {
   performTransition,
   presignAttachments,
@@ -38,10 +39,12 @@ export default function PerformTransitionModal({
   productId,
   transition,
   onClose,
+  onPerformed,
 }: {
   productId: string;
   transition: ProductTransition | null;
   onClose: () => void;
+  onPerformed?: () => void;
 }) {
   const dispatch = useAppDispatch();
   const { performing, performError } = useAppSelector(
@@ -135,10 +138,22 @@ export default function PerformTransitionModal({
     }
 
     const result = await dispatch(
-      performTransition({ productId, transitionId: transition.id, attachments }),
+      performTransition({
+        productId,
+        transitionId: transition.id,
+        attachments,
+      }),
     );
 
-    if (performTransition.fulfilled.match(result)) close();
+    if (performTransition.fulfilled.match(result)) {
+      dispatch(
+        showToast(
+          `${transition.srcStage.name} → ${transition.destStage.name} performed`,
+        ),
+      );
+      onPerformed?.();
+      close();
+    }
   }
 
   return (
@@ -166,14 +181,14 @@ export default function PerformTransitionModal({
     >
       {transition ? (
         <form id="perform-form" onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-lg border border-slate-200 px-3 py-2.5 dark:border-slate-800">
+          <div className="rounded-lg border border-border-subtle px-3 py-2.5">
             <TransitionLabel transition={transition} />
           </div>
 
           {allowAttachments ? (
             <div>
               <span className={labelClass}>Attachments</span>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-muted">
                 Files upload directly to storage before the transition is
                 recorded. Optional.
               </p>
@@ -186,11 +201,11 @@ export default function PerformTransitionModal({
                   event.target.value = "";
                 }}
                 disabled={busy}
-                className="mt-2 block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-800 dark:file:text-slate-200"
+                className="mt-2 block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border file:border-border-subtle file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground"
               />
 
               {files.length > 0 ? (
-                <ul className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+                <ul className="mt-3 divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle">
                   {files.map((file, index) => (
                     <li
                       key={`${file.name}-${index}`}
@@ -200,7 +215,7 @@ export default function PerformTransitionModal({
                         <span className="block truncate text-sm font-medium">
                           {file.name}
                         </span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">
+                        <span className="block text-xs text-muted">
                           {formatBytes(file.size)}
                         </span>
                       </span>
@@ -222,7 +237,7 @@ export default function PerformTransitionModal({
               ) : null}
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-300 px-3 py-3 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <p className="rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-xs text-muted">
               Attachments are not enabled for this transition&apos;s assignee.
             </p>
           )}

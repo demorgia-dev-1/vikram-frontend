@@ -22,8 +22,11 @@ import {
   thClass,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import { fetchCustomers } from "@/store/customersSlice";
+import { fetchMyPendingTransitions } from "@/store/productWorkflowSlice";
 import { deleteProduct, fetchProducts } from "@/store/productsSlice";
+import { fetchTemplates } from "@/store/workflowTemplatesSlice";
 import type { Product } from "@/types";
 
 export default function ProductsPage() {
@@ -34,6 +37,8 @@ export default function ProductsPage() {
     (state) => state.products,
   );
   const customers = useAppSelector((state) => state.customers.items);
+  const templates = useAppSelector((state) => state.workflowTemplates.items);
+  const pending = useAppSelector((state) => state.productWorkflow.pending);
 
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
@@ -46,13 +51,28 @@ export default function ProductsPage() {
     dispatch(fetchProducts({ page, limit: 20 }));
   }, [dispatch, page]);
 
-  // Products carry only customerId, so the list is needed to show a name.
+  // Products carry only ids, so these lists are needed to show names.
   useEffect(() => {
     dispatch(fetchCustomers({ page: 1, limit: 100 }));
+    dispatch(fetchTemplates());
+    dispatch(fetchMyPendingTransitions());
   }, [dispatch]);
+
+  // How many transitions on each product are waiting on the signed-in user.
+  const waitingByProduct = pending.reduce<Record<string, number>>(
+    (counts, item) => {
+      counts[item.productId] = (counts[item.productId] ?? 0) + 1;
+      return counts;
+    },
+    {},
+  );
 
   function customerName(customerId: string) {
     return customers.find((customer) => customer.id === customerId)?.name;
+  }
+
+  function templateName(templateId: string) {
+    return templates.find((template) => template.id === templateId)?.name;
   }
 
   function refresh() {
@@ -65,6 +85,7 @@ export default function ProductsPage() {
     const result = await dispatch(deleteProduct(deleteTarget.id));
 
     if (deleteProduct.fulfilled.match(result)) {
+      dispatch(showToast(`${deleteTarget.name} deactivated`));
       setDeleteTarget(null);
     }
   }
@@ -87,7 +108,7 @@ export default function ProductsPage() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/30">
+            <thead className="border-b border-border-subtle bg-surface-muted">
               <tr>
                 <th className={thClass}>Product</th>
                 <th className={thClass}>Customer</th>
@@ -98,7 +119,7 @@ export default function ProductsPage() {
                 <th className={`${thClass} text-right`}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border-subtle">
               {loading ? (
                 <TableSkeleton cols={7} />
               ) : items.length === 0 ? (
@@ -114,11 +135,18 @@ export default function ProductsPage() {
                 items.map((product) => (
                   <tr
                     key={product.id}
-                    className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    className="transition hover:bg-surface-muted"
                   >
                     <td className={`${tdClass} max-w-xs`}>
-                      <p className="truncate font-medium">{product.name}</p>
-                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-medium">{product.name}</p>
+                        {waitingByProduct[product.id] ? (
+                          <Badge tone="sky">
+                            {waitingByProduct[product.id]} waiting on you
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="truncate text-xs text-muted">
                         {product.description}
                       </p>
                     </td>
@@ -128,15 +156,17 @@ export default function ProductsPage() {
                       )}
                     </td>
                     <td className={`${tdClass} whitespace-nowrap`}>
-                      <Badge>v{product.workflowTemplateVersion}</Badge>
+                      {templateName(product.workflowTemplateId) ?? (
+                        <Muted>Not available</Muted>
+                      )}
                     </td>
-                    <td className={`${tdClass} text-slate-600 dark:text-slate-400`}>
+                    <td className={`${tdClass} text-muted`}>
                       {product.transitionAssignments.length}
                     </td>
                     <td className={tdClass}>
                       <StatusBadge active={product.isActive} />
                     </td>
-                    <td className={`${tdClass} whitespace-nowrap text-slate-600 dark:text-slate-400`}>
+                    <td className={`${tdClass} whitespace-nowrap text-muted`}>
                       {formatDate(product.createdAt)}
                     </td>
                     <td className={tdClass}>

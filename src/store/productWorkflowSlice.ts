@@ -2,6 +2,8 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api, { getErrorMessage } from "@/lib/axios";
 import type {
   AssignTransitionPayload,
+  PendingTransition,
+  PerformedTransition,
   AttachmentRef,
   HistoryEntry,
   PresignFileRequest,
@@ -21,6 +23,12 @@ interface ProductWorkflowState {
   assignError: string | null;
   performing: boolean;
   performError: string | null;
+  pending: PendingTransition[];
+  pendingLoading: boolean;
+  pendingError: string | null;
+  performed: PerformedTransition[];
+  performedLoading: boolean;
+  performedError: string | null;
 }
 
 const initialState: ProductWorkflowState = {
@@ -34,6 +42,12 @@ const initialState: ProductWorkflowState = {
   assignError: null,
   performing: false,
   performError: null,
+  pending: [],
+  pendingLoading: false,
+  pendingError: null,
+  performed: [],
+  performedLoading: false,
+  performedError: null,
 };
 
 const UNKNOWN_STAGE = {
@@ -92,6 +106,41 @@ export const fetchProductTransitions = createAsyncThunk<
   } catch (error) {
     return rejectWithValue(
       getErrorMessage(error, "Could not load transitions."),
+    );
+  }
+});
+
+/** Transitions waiting on the signed-in user, across every product. */
+export const fetchMyPendingTransitions = createAsyncThunk<
+  PendingTransition[],
+  void,
+  { rejectValue: string }
+>("productWorkflow/pending", async (_, { rejectWithValue }) => {
+  try {
+    const { data } = await api.get<PendingTransition[]>(
+      "/products/me/pending-transitions",
+    );
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    return rejectWithValue(
+      getErrorMessage(error, "Could not load your pending work."),
+    );
+  }
+});
+
+export const fetchMyPerformedTransitions = createAsyncThunk<
+  PerformedTransition[],
+  void,
+  { rejectValue: string }
+>("productWorkflow/performed", async (_, { rejectWithValue }) => {
+  try {
+    const { data } = await api.get<PerformedTransition[]>(
+      "/products/me/performed-transitions",
+    );
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    return rejectWithValue(
+      getErrorMessage(error, "Could not load your activity."),
     );
   }
 });
@@ -255,6 +304,33 @@ const productWorkflowSlice = createSlice({
       .addCase(fetchProductHistory.rejected, (state, action) => {
         state.historyLoading = false;
         state.historyError = action.payload ?? "Could not load history.";
+      })
+
+      .addCase(fetchMyPendingTransitions.pending, (state) => {
+        state.pendingLoading = true;
+        state.pendingError = null;
+      })
+      .addCase(fetchMyPendingTransitions.fulfilled, (state, action) => {
+        state.pendingLoading = false;
+        state.pending = action.payload;
+      })
+      .addCase(fetchMyPendingTransitions.rejected, (state, action) => {
+        state.pendingLoading = false;
+        state.pendingError =
+          action.payload ?? "Could not load your pending work.";
+      })
+
+      .addCase(fetchMyPerformedTransitions.pending, (state) => {
+        state.performedLoading = true;
+        state.performedError = null;
+      })
+      .addCase(fetchMyPerformedTransitions.fulfilled, (state, action) => {
+        state.performedLoading = false;
+        state.performed = action.payload;
+      })
+      .addCase(fetchMyPerformedTransitions.rejected, (state, action) => {
+        state.performedLoading = false;
+        state.performedError = action.payload ?? "Could not load your activity.";
       })
 
       .addCase(assignTransition.pending, (state) => {

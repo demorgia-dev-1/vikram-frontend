@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/Modal";
 import UserFormModal from "@/components/UserFormModal";
-import { BanIcon, EyeIcon, PencilIcon } from "@/components/icons";
+import { BanIcon, EyeIcon, PencilIcon, PlusIcon } from "@/components/icons";
 import {
   Avatar,
+  Button,
   Badge,
   Card,
   EmptyState,
@@ -21,6 +22,7 @@ import {
   thClass,
 } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { showToast } from "@/store/toastSlice";
 import { deleteUser, fetchUsers } from "@/store/usersSlice";
 import type { User } from "@/types";
 
@@ -32,6 +34,7 @@ export default function UsersPage() {
     (state) => state.users,
   );
   const [page, setPage] = useState(1);
+  const [creating, setCreating] = useState(false);
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
@@ -43,6 +46,7 @@ export default function UsersPage() {
     const result = await dispatch(deleteUser(deleteTarget.id));
 
     if (deleteUser.fulfilled.match(result)) {
+      dispatch(showToast(`${deleteTarget.name} deactivated`));
       setDeleteTarget(null);
     }
   }
@@ -56,6 +60,14 @@ export default function UsersPage() {
       <PageHeader
         title="Users"
         description="Portal accounts with access to this workspace."
+        action={
+          isAdmin ? (
+            <Button onClick={() => setCreating(true)}>
+              <PlusIcon className="h-4 w-4" />
+              New user
+            </Button>
+          ) : undefined
+        }
       />
 
       {error ? <ErrorNote message={error} /> : null}
@@ -63,7 +75,7 @@ export default function UsersPage() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/30">
+            <thead className="border-b border-border-subtle bg-surface-muted">
               <tr>
                 <th className={thClass}>Name</th>
                 <th className={thClass}>Role</th>
@@ -72,7 +84,7 @@ export default function UsersPage() {
                 <th className={`${thClass} text-right`}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border-subtle">
               {loading ? (
                 <TableSkeleton cols={5} />
               ) : items.length === 0 ? (
@@ -85,14 +97,14 @@ export default function UsersPage() {
                 items.map((user) => (
                   <tr
                     key={user.id}
-                    className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    className="transition hover:bg-surface-muted"
                   >
                     <td className={tdClass}>
                       <div className="flex items-center gap-3">
                         <Avatar name={user.name} className="h-9 w-9 text-xs" />
                         <div className="min-w-0">
                           <p className="truncate font-medium">{user.name}</p>
-                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                          <p className="truncate text-xs text-muted">
                             {user.email}
                           </p>
                         </div>
@@ -104,9 +116,7 @@ export default function UsersPage() {
                     <td className={tdClass}>
                       <StatusBadge active={user.isActive} />
                     </td>
-                    <td
-                      className={`${tdClass} whitespace-nowrap text-slate-600 dark:text-slate-400`}
-                    >
+                    <td className={`${tdClass} whitespace-nowrap text-muted`}>
                       {formatDate(user.createdAt)}
                     </td>
                     <td className={tdClass}>
@@ -159,6 +169,12 @@ export default function UsersPage() {
           <Pagination meta={meta} onPageChange={setPage} disabled={loading} />
         ) : null}
       </Card>
+
+      <UserFormModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        onSaved={() => dispatch(fetchUsers({ page, limit: 20 }))}
+      />
 
       <UserFormModal
         key={editTarget?.id}
