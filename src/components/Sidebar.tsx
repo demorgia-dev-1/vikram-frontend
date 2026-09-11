@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAppSelector } from "@/store";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   BoxIcon,
@@ -14,9 +15,15 @@ import {
 
 type NavItem = { label: string; href: string; icon: React.ReactNode };
 
+const MY_WORK: NavItem = {
+  label: "My work",
+  href: "/dashboard/my-work",
+  icon: <InboxIcon />,
+};
+
 const OPERATIONS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <GridIcon /> },
-  { label: "My work", href: "/dashboard/my-work", icon: <InboxIcon /> },
+  MY_WORK,
   { label: "Products", href: "/dashboard/products", icon: <BoxIcon /> },
   { label: "Customers", href: "/dashboard/customers", icon: <BuildingIcon /> },
 ];
@@ -38,6 +45,7 @@ export default function Sidebar({
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
+  const isAdmin = useAppSelector((state) => state.auth.user?.role) === "ADMIN";
 
   return (
     <aside
@@ -57,21 +65,24 @@ export default function Sidebar({
         </div>
       </div>
 
+      {/* Everything but My work is admin-only, so a non-admin sees one item. */}
       <nav className="flex-1 overflow-y-auto px-3 py-5">
         <NavGroup
           label="Operations"
-          items={OPERATIONS}
+          items={isAdmin ? OPERATIONS : [MY_WORK]}
           pathname={pathname}
           onNavigate={onNavigate}
         />
-        <div className="mt-7">
-          <NavGroup
-            label="Platform"
-            items={PLATFORM}
-            pathname={pathname}
-            onNavigate={onNavigate}
-          />
-        </div>
+        {isAdmin ? (
+          <div className="mt-7">
+            <NavGroup
+              label="Platform"
+              items={PLATFORM}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
+          </div>
+        ) : null}
       </nav>
 
       <div className="border-t border-sidebar-border p-3">

@@ -3,6 +3,7 @@ import api, { getErrorMessage } from "@/lib/axios";
 import type {
   StagePayload,
   TransitionPayload,
+  TransitionUpdatePayload,
   WorkflowTemplate,
   WorkflowTemplatePayload,
   WorkflowTemplateDetail,
@@ -237,6 +238,34 @@ export const createTransition = createAsyncThunk<
     } catch (error) {
       return rejectWithValue(
         getErrorMessage(error, "Could not add the transition."),
+      );
+    }
+  },
+);
+
+export const updateTransition = createAsyncThunk<
+  void,
+  {
+    templateId: string;
+    transitionId: string;
+    payload: TransitionUpdatePayload;
+  },
+  { rejectValue: string }
+>(
+  "workflowTemplates/updateTransition",
+  async (
+    { templateId, transitionId, payload },
+    { dispatch, rejectWithValue },
+  ) => {
+    try {
+      await api.patch(
+        `/workflow-templates/${templateId}/transitions/${transitionId}`,
+        payload,
+      );
+      await dispatch(fetchTemplateById(templateId));
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error, "Could not update the transition."),
       );
     }
   },

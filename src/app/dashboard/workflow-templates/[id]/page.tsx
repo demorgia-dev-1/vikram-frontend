@@ -21,7 +21,6 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import {
   clearSaveError,
   clearSelectedTemplate,
-  createTransition,
   deleteStage,
   deleteTemplate,
   deleteTransition,
@@ -55,7 +54,11 @@ export default function WorkflowTemplateDetailPage({
   const [stageForm, setStageForm] = useState<
     { mode: "create" } | { mode: "edit"; stage: WorkflowStage } | null
   >(null);
-  const [addingTransition, setAddingTransition] = useState(false);
+  const [transitionForm, setTransitionForm] = useState<
+    | { mode: "create"; defaults?: { srcStageId: string; destStageId: string } }
+    | { mode: "edit"; transition: WorkflowTransition }
+    | null
+  >(null);
   const [pendingStageDelete, setPendingStageDelete] =
     useState<WorkflowStage | null>(null);
   const [pendingTransitionDelete, setPendingTransitionDelete] =
@@ -188,7 +191,9 @@ export default function WorkflowTemplateDetailPage({
                     ? "Add at least two stages first"
                     : "Connect two stages without dragging"
                 }
-                onClick={() => open(() => setAddingTransition(true))}
+                onClick={() =>
+                  open(() => setTransitionForm({ mode: "create" }))
+                }
               >
                 <PlusIcon className="h-3.5 w-3.5" />
                 Add transition
@@ -229,28 +234,23 @@ export default function WorkflowTemplateDetailPage({
               ? () => open(() => setStageForm({ mode: "create" }))
               : undefined
           }
+          onEditTransition={
+            isAdmin
+              ? (transition) =>
+                  open(() => setTransitionForm({ mode: "edit", transition }))
+              : undefined
+          }
           onConnectStages={
             isAdmin
-              ? async (srcStageId, destStageId) => {
-                  const name = (stageId: string) =>
-                    stages.find((stage) => stage.id === stageId)?.name ??
-                    "stage";
-
-                  const result = await dispatch(
-                    createTransition({
-                      templateId: id,
-                      payload: { srcStageId, destStageId },
+              ? (srcStageId, destStageId) =>
+                  // A transition needs a name, so the drag opens the dialog with
+                  // the pair prefilled rather than creating it outright.
+                  open(() =>
+                    setTransitionForm({
+                      mode: "create",
+                      defaults: { srcStageId, destStageId },
                     }),
-                  );
-
-                  if (createTransition.fulfilled.match(result)) {
-                    dispatch(
-                      showToast(
-                        `${name(srcStageId)} → ${name(destStageId)} added`,
-                      ),
-                    );
-                  }
-                }
+                  )
               : undefined
           }
         />
@@ -359,10 +359,21 @@ export default function WorkflowTemplateDetailPage({
       />
 
       <TransitionFormModal
-        open={addingTransition}
+        key={
+          transitionForm?.mode === "edit"
+            ? `transition-${transitionForm.transition.id}`
+            : `transition-new-${transitionForm?.defaults?.srcStageId ?? ""}`
+        }
+        open={Boolean(transitionForm)}
         templateId={id}
         stages={stages}
-        onClose={() => setAddingTransition(false)}
+        transition={
+          transitionForm?.mode === "edit" ? transitionForm.transition : null
+        }
+        defaults={
+          transitionForm?.mode === "create" ? transitionForm.defaults : null
+        }
+        onClose={() => setTransitionForm(null)}
       />
 
       <VersionSnapshotModal

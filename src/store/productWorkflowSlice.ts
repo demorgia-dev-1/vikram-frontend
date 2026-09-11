@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api, { getErrorMessage } from "@/lib/axios";
 import type {
-  AssignTransitionPayload,
   PendingTransition,
   PerformedTransition,
   AttachmentRef,
@@ -19,8 +18,6 @@ interface ProductWorkflowState {
   history: HistoryEntry[];
   historyLoading: boolean;
   historyError: string | null;
-  assigning: boolean;
-  assignError: string | null;
   performing: boolean;
   performError: string | null;
   pending: PendingTransition[];
@@ -38,8 +35,6 @@ const initialState: ProductWorkflowState = {
   history: [],
   historyLoading: false,
   historyError: null,
-  assigning: false,
-  assignError: null,
   performing: false,
   performError: null,
   pending: [],
@@ -65,6 +60,8 @@ const UNKNOWN_STAGE = {
 type RawTransition = {
   id?: string;
   transitionId?: string;
+  name?: string | null;
+  transitionName?: string | null;
   srcStage?: WorkflowStage;
   sourceStage?: WorkflowStage;
   fromStage?: WorkflowStage;
@@ -84,9 +81,12 @@ function normalizeTransition(
 ): ProductTransition {
   return {
     id: value.id ?? value.transitionId ?? `transition-${index}`,
-    srcStage: value.srcStage ?? value.sourceStage ?? value.fromStage ?? UNKNOWN_STAGE,
+    name: value.transitionName ?? value.name ?? null,
+    srcStage:
+      value.srcStage ?? value.sourceStage ?? value.fromStage ?? UNKNOWN_STAGE,
     destStage: value.destStage ?? value.toStage ?? UNKNOWN_STAGE,
-    assigneeId: value.assignee?.id ?? value.assigneeId ?? value.assigneeUserId ?? null,
+    assigneeId:
+      value.assignee?.id ?? value.assigneeId ?? value.assigneeUserId ?? null,
     assigneeName: value.assignee?.name ?? value.assigneeName ?? null,
     assigneeEmail: value.assignee?.email ?? value.assigneeEmail ?? null,
     allowAttachments: value.allowAttachments ?? false,
@@ -100,7 +100,9 @@ export const fetchProductTransitions = createAsyncThunk<
 >("productWorkflow/transitions", async (productId, { rejectWithValue }) => {
   try {
     const { data } = await api.get(`/products/${productId}/transitions`);
-    const list = Array.isArray(data) ? data : (data?.data ?? data?.transitions ?? []);
+    const list = Array.isArray(data)
+      ? data
+      : (data?.data ?? data?.transitions ?? []);
 
     return (list as RawTransition[]).map(normalizeTransition);
   } catch (error) {
@@ -159,32 +161,6 @@ export const fetchProductHistory = createAsyncThunk<
     return rejectWithValue(getErrorMessage(error, "Could not load history."));
   }
 });
-
-export const assignTransition = createAsyncThunk<
-  void,
-  {
-    productId: string;
-    transitionId: string;
-    payload: AssignTransitionPayload;
-  },
-  { rejectValue: string }
->(
-  "productWorkflow/assign",
-  async ({ productId, transitionId, payload }, { dispatch, rejectWithValue }) => {
-    try {
-      await api.put(
-        `/products/${productId}/transitions/${transitionId}/assignee`,
-        payload,
-      );
-      // The response shape isn't guaranteed, so re-read the merged list.
-      await dispatch(fetchProductTransitions(productId));
-    } catch (error) {
-      return rejectWithValue(
-        getErrorMessage(error, "Could not assign this transition."),
-      );
-    }
-  },
-);
 
 type RawPresigned = {
   key: string;
@@ -273,7 +249,6 @@ const productWorkflowSlice = createSlice({
   reducers: {
     clearProductWorkflow: () => initialState,
     clearWorkflowActionErrors(state) {
-      state.assignError = null;
       state.performError = null;
     },
   },
@@ -330,19 +305,8 @@ const productWorkflowSlice = createSlice({
       })
       .addCase(fetchMyPerformedTransitions.rejected, (state, action) => {
         state.performedLoading = false;
-        state.performedError = action.payload ?? "Could not load your activity.";
-      })
-
-      .addCase(assignTransition.pending, (state) => {
-        state.assigning = true;
-        state.assignError = null;
-      })
-      .addCase(assignTransition.fulfilled, (state) => {
-        state.assigning = false;
-      })
-      .addCase(assignTransition.rejected, (state, action) => {
-        state.assigning = false;
-        state.assignError = action.payload ?? "Could not assign this transition.";
+        state.performedError =
+          action.payload ?? "Could not load your activity.";
       })
 
       .addCase(performTransition.pending, (state) => {

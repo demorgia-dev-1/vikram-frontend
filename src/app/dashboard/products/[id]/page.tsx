@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import AssignTransitionModal from "@/components/AssignTransitionModal";
 import PerformTransitionModal from "@/components/PerformTransitionModal";
 import WorkflowGraph from "@/components/WorkflowGraph";
 import { BoxIcon } from "@/components/icons";
@@ -68,9 +67,6 @@ export default function ProductDetailPage({
     performed,
   } = useAppSelector((state) => state.productWorkflow);
 
-  const [assignTarget, setAssignTarget] = useState<ProductTransition | null>(
-    null,
-  );
   const [performTarget, setPerformTarget] = useState<ProductTransition | null>(
     null,
   );
@@ -380,15 +376,6 @@ export default function ProductDetailPage({
                     )}
 
                     <div className="ml-auto flex shrink-0 items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        className="px-3 py-1.5 text-xs"
-                        disabled={!isAdmin}
-                        title={isAdmin ? undefined : "Admins only"}
-                        onClick={() => setAssignTarget(transition)}
-                      >
-                        {transition.assigneeId ? "Reassign" : "Assign"}
-                      </Button>
                       {performedOn ? (
                         <Badge tone="green">
                           {performedByYou.has(transition.id)
@@ -405,11 +392,11 @@ export default function ProductDetailPage({
                               ? "Not available from the current stage"
                               : canPerform
                                 ? undefined
-                                : "Only the assignee or an admin can perform this"
+                                : "Only the assignee or an admin can run this"
                           }
                           onClick={() => setPerformTarget(transition)}
                         >
-                          Perform
+                          {transition.name || "Run"}
                         </Button>
                       )}
                     </div>
@@ -451,8 +438,18 @@ export default function ProductDetailPage({
                         {entry.performedByName}
                       </span>
                       <span className="text-muted">
-                        {" "}
-                        moved {stageName(entry.srcStageId)} →{" "}
+                        {entry.transitionName ? (
+                          <>
+                            {" ran "}
+                            <span className="font-medium text-foreground">
+                              {entry.transitionName}
+                            </span>
+                            {" — "}
+                          </>
+                        ) : (
+                          " moved "
+                        )}
+                        {stageName(entry.srcStageId)} →{" "}
                         {stageName(entry.destStageId)}
                       </span>
                     </p>
@@ -498,13 +495,6 @@ export default function ProductDetailPage({
           ) : null}
         </div>
       </Card>
-
-      <AssignTransitionModal
-        key={`assign-${assignTarget?.id}-${assignTarget?.assigneeId}`}
-        productId={id}
-        transition={assignTarget}
-        onClose={() => setAssignTarget(null)}
-      />
 
       <PerformTransitionModal
         onPerformed={() => {

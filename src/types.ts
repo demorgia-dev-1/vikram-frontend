@@ -37,8 +37,14 @@ export interface StagePayload {
 }
 
 export interface TransitionPayload {
+  name: string;
   srcStageId: string;
   destStageId: string;
+}
+
+/** Only the name is editable; the stages it connects are fixed. */
+export interface TransitionUpdatePayload {
+  name: string;
 }
 
 export interface Customer {
@@ -70,6 +76,8 @@ export interface WorkflowStage {
 
 export interface WorkflowTransition {
   id: string;
+  /** The action it represents, e.g. "Approve". Template graphs only. */
+  name?: string | null;
   srcStage: WorkflowStage;
   destStage: WorkflowStage;
 }
@@ -150,6 +158,7 @@ export interface ProductUpdatePayload {
 /** A template transition merged with this product's own assignee, if any. */
 export interface ProductTransition {
   id: string;
+  name?: string | null;
   srcStage: WorkflowStage;
   destStage: WorkflowStage;
   assigneeId?: string | null;
@@ -163,6 +172,7 @@ export interface PendingTransition {
   productId: string;
   productName: string;
   transitionId: string;
+  transitionName: string | null;
   srcStage: WorkflowStage;
   destStage: WorkflowStage;
   allowAttachments: boolean;
@@ -173,14 +183,10 @@ export interface PerformedTransition {
   productId: string;
   productName: string;
   transitionId: string;
+  transitionName: string | null;
   srcStage: WorkflowStage;
   destStage: WorkflowStage;
   performedAt: string;
-}
-
-export interface AssignTransitionPayload {
-  assigneeUserId: string;
-  allowAttachments: boolean;
 }
 
 export interface PresignFileRequest {
@@ -214,6 +220,7 @@ export interface HistoryAttachment {
 export interface HistoryEntry {
   id: string;
   transitionId: string;
+  transitionName: string | null;
   srcStageId: string;
   destStageId: string;
   performedById: string;

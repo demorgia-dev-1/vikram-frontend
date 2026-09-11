@@ -39,10 +39,11 @@ export default function MyWorkPage() {
     dispatch(fetchMyPerformedTransitions());
   }, [dispatch]);
 
-  /** The perform dialog works from a product transition, so adapt the row. */
+  /** The transition dialog works from a product transition, so adapt the row. */
   const asTransition: ProductTransition | null = target
     ? {
         id: target.transitionId,
+        name: target.transitionName,
         srcStage: target.srcStage,
         destStage: target.destStage,
         allowAttachments: target.allowAttachments,
@@ -92,6 +93,7 @@ export default function MyWorkPage() {
                     <TransitionLabel
                       transition={{
                         id: item.transitionId,
+                        name: item.transitionName,
                         srcStage: item.srcStage,
                         destStage: item.destStage,
                       }}
@@ -104,7 +106,7 @@ export default function MyWorkPage() {
                   className="shrink-0 px-3 py-1.5 text-xs"
                   onClick={() => setTarget(item)}
                 >
-                  Perform
+                  {item.transitionName || "Run"}
                 </Button>
               </li>
             ))}
@@ -146,6 +148,7 @@ export default function MyWorkPage() {
                     <TransitionLabel
                       transition={{
                         id: item.transitionId,
+                        name: item.transitionName,
                         srcStage: item.srcStage,
                         destStage: item.destStage,
                       }}

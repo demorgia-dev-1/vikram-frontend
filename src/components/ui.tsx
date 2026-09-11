@@ -554,11 +554,27 @@ export function TransitionLabel({
         className,
       )}
     >
-      <span className="truncate">{transition.srcStage.name}</span>
-      <span className="shrink-0 text-subtle" aria-hidden>
-        →
+      {/* The action, when the transition has been named. */}
+      {transition.name ? (
+        <>
+          <span className="truncate">{transition.name}</span>
+          <span className="shrink-0 text-subtle" aria-hidden>
+            ·
+          </span>
+        </>
+      ) : null}
+      <span
+        className={cn(
+          "flex min-w-0 items-center gap-1.5",
+          transition.name && "font-normal text-muted",
+        )}
+      >
+        <span className="truncate">{transition.srcStage.name}</span>
+        <span className="shrink-0 text-subtle" aria-hidden>
+          →
+        </span>
+        <span className="truncate">{transition.destStage.name}</span>
       </span>
-      <span className="truncate">{transition.destStage.name}</span>
     </span>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Toaster from "@/components/Toaster";
@@ -9,13 +9,19 @@ import { Spinner } from "@/components/ui";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchMe, logout } from "@/store/authSlice";
 
+/** The only section a non-admin may open. */
+const MY_WORK = "/dashboard/my-work";
+
 export default function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { token, user, meLoading } = useAppSelector((state) => state.auth);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isAdmin = user?.role === "ADMIN";
 
   // hydrateAuth runs in the store provider, so a null token here means signed out.
   useEffect(() => {
@@ -29,12 +35,22 @@ export default function DashboardLayout({
     }
   }, [token, user, meLoading, dispatch, router]);
 
+  // Every section but My work is admin-only, so a non-admin who reaches one by
+  // URL is sent back. The server still enforces this; hiding the nav does not.
+  useEffect(() => {
+    if (user && !isAdmin && pathname !== MY_WORK) {
+      router.replace(MY_WORK);
+    }
+  }, [user, isAdmin, pathname, router]);
+
   function handleLogout() {
     dispatch(logout());
     router.replace("/login");
   }
 
-  if (!token || !user) {
+  // The second condition covers the tick before the redirect above lands, so an
+  // admin-only page never flashes up for a non-admin.
+  if (!token || !user || (!isAdmin && pathname !== MY_WORK)) {
     return (
       <div className="flex flex-1 items-center justify-center text-subtle">
         <Spinner className="h-6 w-6" />

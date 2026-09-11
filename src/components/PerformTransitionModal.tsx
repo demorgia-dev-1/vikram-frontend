@@ -148,7 +148,9 @@ export default function PerformTransitionModal({
     if (performTransition.fulfilled.match(result)) {
       dispatch(
         showToast(
-          `${transition.srcStage.name} → ${transition.destStage.name} performed`,
+          transition.name
+            ? `${transition.name} recorded`
+            : `${transition.srcStage.name} → ${transition.destStage.name} recorded`,
         ),
       );
       onPerformed?.();
@@ -159,7 +161,7 @@ export default function PerformTransitionModal({
   return (
     <Modal
       open={Boolean(transition)}
-      title="Perform transition"
+      title={transition?.name || "Run transition"}
       description="This advances the product's workflow and is recorded against your account."
       onClose={close}
       size="sm"
@@ -173,8 +175,8 @@ export default function PerformTransitionModal({
             {uploading
               ? "Uploading…"
               : performing
-                ? "Performing…"
-                : "Perform transition"}
+                ? "Working…"
+                : transition?.name || "Confirm"}
           </Button>
         </>
       }

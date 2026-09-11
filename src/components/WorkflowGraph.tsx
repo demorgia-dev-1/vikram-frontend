@@ -40,6 +40,9 @@ type StageNodeData = {
 };
 
 type TransitionEdgeData = {
+  label?: string | null;
+  onEditLabel?: () => void;
+  onDeleteEdge?: () => void;
   performable?: boolean;
   onPerform?: () => void;
 };
@@ -217,7 +220,7 @@ function StageNodeCard({ data, selected }: NodeProps) {
   );
 }
 
-/** Draws the edge, plus a Perform button when this transition can be run now. */
+/** Draws the edge, labelled with the transition name. */
 function TransitionEdge({
   id,
   sourceX,
@@ -239,28 +242,74 @@ function TransitionEdge({
     targetPosition,
   });
 
-  const { performable, onPerform } = (data ?? {}) as TransitionEdgeData;
+  const { label, onEditLabel, onDeleteEdge, performable, onPerform } = (data ??
+    {}) as TransitionEdgeData;
 
   return (
     <>
       <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />
-      {performable ? (
-        <EdgeLabelRenderer>
-          <button
-            type="button"
-            style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            }}
-            onClick={(event) => {
-              event.stopPropagation();
-              onPerform?.();
-            }}
-            className="nodrag nopan pointer-events-auto absolute rounded-md bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
-          >
-            Perform
-          </button>
-        </EdgeLabelRenderer>
-      ) : null}
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+          }}
+          className="nodrag nopan pointer-events-auto absolute flex items-center gap-1"
+        >
+          {/*
+            One chip per edge, carrying the transition's own name. When the
+            viewer may run it the chip is the action itself — the name is the
+            label, so no generic verb appears on the canvas.
+          */}
+          {performable ? (
+            <button
+              type="button"
+              title={label ?? undefined}
+              onClick={(event) => {
+                event.stopPropagation();
+                onPerform?.();
+              }}
+              className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
+            >
+              {label || "Unnamed"}
+            </button>
+          ) : label || onEditLabel ? (
+            onEditLabel ? (
+              <button
+                type="button"
+                title="Rename transition"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditLabel();
+                }}
+                className={`rounded border border-border-subtle bg-surface px-1.5 py-0.5 text-[10px] font-medium shadow-sm transition-colors hover:border-primary hover:text-primary ${
+                  label ? "text-foreground" : "text-subtle italic"
+                }`}
+              >
+                {label || "Unnamed"}
+              </button>
+            ) : (
+              <span className="rounded border border-border-subtle bg-surface px-1.5 py-0.5 text-[10px] font-medium shadow-sm">
+                {label}
+              </span>
+            )
+          ) : null}
+
+          {onDeleteEdge ? (
+            <button
+              type="button"
+              title="Delete transition"
+              aria-label={`Delete transition ${label ?? ""}`.trim()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteEdge();
+              }}
+              className="rounded border border-border-subtle bg-surface p-0.5 text-muted shadow-sm transition-colors hover:border-danger hover:bg-danger-soft hover:text-danger"
+            >
+              <TrashIcon className="h-3 w-3" />
+            </button>
+          ) : null}
+        </div>
+      </EdgeLabelRenderer>
     </>
   );
 }
@@ -280,6 +329,7 @@ export type WorkflowGraphProps = {
   onPerform?: (transitionId: string) => void;
   onEditStage?: (stage: WorkflowStage) => void;
   onDeleteStage?: (stage: WorkflowStage) => void;
+  onEditTransition?: (transition: WorkflowTransition) => void;
   onDeleteTransition?: (transition: WorkflowTransition) => void;
   onConnectStages?: (srcStageId: string, destStageId: string) => void;
   onAddStage?: () => void;
@@ -295,6 +345,7 @@ function Graph({
   onPerform,
   onEditStage,
   onDeleteStage,
+  onEditTransition,
   onDeleteTransition,
   onConnectStages,
   onAddStage,
@@ -341,12 +392,26 @@ function Graph({
             color: stroke,
           },
           data: {
+            label: transition.name,
+            onEditLabel: onEditTransition
+              ? () => onEditTransition(transition)
+              : undefined,
+            onDeleteEdge: onDeleteTransition
+              ? () => onDeleteTransition(transition)
+              : undefined,
             performable: canPerform?.(transition.id) ?? false,
             onPerform: () => onPerform?.(transition.id),
           },
         };
       }),
-    [transitions, currentStageId, canPerform, onPerform],
+    [
+      transitions,
+      currentStageId,
+      canPerform,
+      onPerform,
+      onEditTransition,
+      onDeleteTransition,
+    ],
   );
 
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
@@ -477,7 +542,7 @@ export default function WorkflowGraph(props: WorkflowGraphProps) {
     ...props.stages.map(
       (s) => `${s.id}:${s.name}:${s.isInitial}${s.isTerminal}`,
     ),
-    ...props.transitions.map((t) => t.id),
+    ...props.transitions.map((t) => `${t.id}:${t.name ?? ""}`),
     props.currentStageId ?? "",
   ].join("|");
 
