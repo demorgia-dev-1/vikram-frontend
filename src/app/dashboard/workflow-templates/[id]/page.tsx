@@ -9,7 +9,7 @@ import TemplateFormModal from "@/components/TemplateFormModal";
 import TransitionFormModal from "@/components/TransitionFormModal";
 import VersionSnapshotModal from "@/components/VersionSnapshotModal";
 import WorkflowGraph from "@/components/WorkflowGraph";
-import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { PencilIcon, PlusIcon, ResetIcon, TrashIcon } from "@/components/icons";
 import {
   Button,
   Card,
@@ -17,6 +17,7 @@ import {
   Spinner,
   formatDateTime,
 } from "@/components/ui";
+import { clearLayout } from "@/lib/graphLayout";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   clearSaveError,
@@ -66,6 +67,8 @@ export default function WorkflowTemplateDetailPage({
   const [pendingTemplateDelete, setPendingTemplateDelete] = useState(false);
   const [pendingPublish, setPendingPublish] = useState(false);
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
+  // Bumped to remount the graph so it re-reads the (now cleared) arrangement.
+  const [graphNonce, setGraphNonce] = useState(0);
 
   useEffect(() => {
     dispatch(fetchTemplateById(id));
@@ -180,38 +183,55 @@ export default function WorkflowTemplateDetailPage({
             </p>
           </div>
 
-          {isAdmin ? (
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="secondary"
-                className="px-3 py-1.5 text-xs"
-                disabled={stages.length < 2}
-                title={
-                  stages.length < 2
-                    ? "Add at least two stages first"
-                    : "Connect two stages without dragging"
-                }
-                onClick={() =>
-                  open(() => setTransitionForm({ mode: "create" }))
-                }
-              >
-                <PlusIcon className="h-3.5 w-3.5" />
-                Add transition
-              </Button>
-              <Button
-                className="px-3 py-1.5 text-xs"
-                onClick={() => open(() => setStageForm({ mode: "create" }))}
-              >
-                <PlusIcon className="h-3.5 w-3.5" />
-                Add stage
-              </Button>
-            </div>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="secondary"
+              className="px-3 py-1.5 text-xs"
+              title="Reset the node arrangement to the automatic layout"
+              onClick={() => {
+                clearLayout(`template:${id}`);
+                setGraphNonce((count) => count + 1);
+              }}
+            >
+              <ResetIcon className="h-3.5 w-3.5" />
+              Reset layout
+            </Button>
+
+            {isAdmin ? (
+              <>
+                <Button
+                  variant="secondary"
+                  className="px-3 py-1.5 text-xs"
+                  disabled={stages.length < 2}
+                  title={
+                    stages.length < 2
+                      ? "Add at least two stages first"
+                      : "Connect two stages without dragging"
+                  }
+                  onClick={() =>
+                    open(() => setTransitionForm({ mode: "create" }))
+                  }
+                >
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add transition
+                </Button>
+                <Button
+                  className="px-3 py-1.5 text-xs"
+                  onClick={() => open(() => setStageForm({ mode: "create" }))}
+                >
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add stage
+                </Button>
+              </>
+            ) : null}
+          </div>
         </div>
 
         <WorkflowGraph
+          key={graphNonce}
           stages={stages}
           transitions={transitions}
+          layoutKey={`template:${id}`}
           readOnly={!isAdmin}
           onEditStage={
             isAdmin

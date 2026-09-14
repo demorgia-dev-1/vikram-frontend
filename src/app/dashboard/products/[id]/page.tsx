@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import PerformTransitionModal from "@/components/PerformTransitionModal";
 import WorkflowGraph from "@/components/WorkflowGraph";
-import { BoxIcon } from "@/components/icons";
+import { BoxIcon, ResetIcon } from "@/components/icons";
 import {
   Avatar,
   Badge,
@@ -24,6 +24,7 @@ import {
   formatDate,
   formatDateTime,
 } from "@/components/ui";
+import { clearLayout } from "@/lib/graphLayout";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchCustomerById } from "@/store/customersSlice";
 import {
@@ -71,6 +72,8 @@ export default function ProductDetailPage({
     null,
   );
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  // Bumped to remount the graph so it re-reads the (now cleared) arrangement.
+  const [graphNonce, setGraphNonce] = useState(0);
 
   useEffect(() => {
     dispatch(fetchProductById(id));
@@ -305,13 +308,31 @@ export default function ProductDetailPage({
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader title="Workflow" />
+        <CardHeader
+          title="Workflow"
+          action={
+            <Button
+              variant="secondary"
+              className="px-3 py-1.5 text-xs"
+              title="Reset the node arrangement to the automatic layout"
+              onClick={() => {
+                clearLayout(`product:${id}`);
+                setGraphNonce((count) => count + 1);
+              }}
+            >
+              <ResetIcon className="h-3.5 w-3.5" />
+              Reset layout
+            </Button>
+          }
+        />
         <div>
           {stages.length > 0 ? (
             <div className="border-b border-border-subtle">
               <WorkflowGraph
+                key={graphNonce}
                 stages={stages}
                 transitions={transitions}
+                layoutKey={`product:${id}`}
                 readOnly
                 heightClass="h-[22rem]"
                 currentStageId={currentStageId}

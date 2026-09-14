@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/Modal";
 import TemplateFormModal from "@/components/TemplateFormModal";
 import { EyeIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { useDebounced } from "@/lib/useDebounced";
 import {
   Button,
   Card,
   EmptyState,
   ErrorNote,
+  ClearFiltersButton,
+  ColumnSearch,
+  FilterCell,
+  FilterRow,
   IconButton,
   PageHeader,
   TableSkeleton,
@@ -30,6 +35,8 @@ export default function WorkflowTemplatesPage() {
     (state) => state.workflowTemplates,
   );
 
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [creating, setCreating] = useState(false);
   const [editTarget, setEditTarget] = useState<WorkflowTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WorkflowTemplate | null>(
@@ -46,13 +53,13 @@ export default function WorkflowTemplatesPage() {
     if (deleteTemplate.fulfilled.match(result)) {
       dispatch(showToast(`${deleteTarget.name} deleted`));
       setDeleteTarget(null);
-      dispatch(fetchTemplates());
+      dispatch(fetchTemplates({ search: debouncedSearch }));
     }
   }
 
   useEffect(() => {
-    dispatch(fetchTemplates());
-  }, [dispatch]);
+    dispatch(fetchTemplates({ search: debouncedSearch }));
+  }, [dispatch, debouncedSearch]);
 
   return (
     <div className="space-y-5">
@@ -81,6 +88,23 @@ export default function WorkflowTemplatesPage() {
                 <th className={thClass}>Updated</th>
                 <th className={`${thClass} text-right`}>Actions</th>
               </tr>
+
+              <FilterRow>
+                <FilterCell>
+                  <ColumnSearch
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Template name"
+                  />
+                </FilterCell>
+                <FilterCell />
+                <FilterCell />
+                <FilterCell>
+                  {search ? (
+                    <ClearFiltersButton onClick={() => setSearch("")} />
+                  ) : null}
+                </FilterCell>
+              </FilterRow>
             </thead>
             <tbody className="divide-y divide-border-subtle">
               {loading ? (
@@ -89,8 +113,16 @@ export default function WorkflowTemplatesPage() {
                 <tr>
                   <td colSpan={4}>
                     <EmptyState
-                      title="No workflow templates"
-                      description="Templates are defined in the workflow service."
+                      title={
+                        search
+                          ? "No matching templates"
+                          : "No workflow templates"
+                      }
+                      description={
+                        search
+                          ? "Try a different search term."
+                          : "Create a template to define a process."
+                      }
                     />
                   </td>
                 </tr>
@@ -152,7 +184,7 @@ export default function WorkflowTemplatesPage() {
       <TemplateFormModal
         open={creating}
         onClose={() => setCreating(false)}
-        onSaved={() => dispatch(fetchTemplates())}
+        onSaved={() => dispatch(fetchTemplates({ search: debouncedSearch }))}
       />
 
       <TemplateFormModal
@@ -160,7 +192,7 @@ export default function WorkflowTemplatesPage() {
         open={Boolean(editTarget)}
         template={editTarget}
         onClose={() => setEditTarget(null)}
-        onSaved={() => dispatch(fetchTemplates())}
+        onSaved={() => dispatch(fetchTemplates({ search: debouncedSearch }))}
       />
 
       <ConfirmModal

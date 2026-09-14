@@ -163,6 +163,102 @@ export function PageHeader({
   );
 }
 
+/**
+ * Second header row: one filter per column, aligned under its column name, so
+ * a control always sits beneath the field it narrows.
+ */
+export function FilterRow({ children }: { children: React.ReactNode }) {
+  return (
+    // The <thead> already supplies the muted ground and the closing border.
+    <tr>{children}</tr>
+  );
+}
+
+/** Header cell holding a filter control, or an empty spacer when given none. */
+export function FilterCell({ children }: { children?: React.ReactNode }) {
+  return <th className="px-5 pb-3 align-top font-normal">{children}</th>;
+}
+
+const controlClass =
+  "h-8 w-full min-w-28 rounded-md border border-border-subtle bg-surface text-xs text-foreground outline-none transition-colors hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-ring/25";
+
+export function ColumnSearch({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle"
+        aria-hidden
+      >
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m16 16 4.5 4.5" strokeLinecap="round" />
+      </svg>
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className={cn(controlClass, "pl-7 pr-2 placeholder:text-subtle")}
+      />
+    </div>
+  );
+}
+
+export function ColumnFilter({
+  label,
+  value,
+  onChange,
+  options,
+  allLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  allLabel: string;
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={cn(controlClass, "truncate px-1.5", !value && "text-muted")}
+    >
+      <option value="">{allLabel}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** Sits in the actions column of the filter row; only shown once one is set. */
+export function ClearFiltersButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="ml-auto flex h-8 items-center rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+    >
+      Clear
+    </button>
+  );
+}
+
 export function Field({
   label,
   htmlFor,

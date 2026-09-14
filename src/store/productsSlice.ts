@@ -1,10 +1,10 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import api, { getErrorMessage } from "@/lib/axios";
+import api, { getErrorMessage, listQuery } from "@/lib/axios";
 import type {
-  ListParams,
   Meta,
   Paginated,
   Product,
+  ProductListParams,
   ProductPayload,
   ProductUpdatePayload,
 } from "@/types";
@@ -43,12 +43,19 @@ const initialState: ProductsState = {
 
 export const fetchProducts = createAsyncThunk<
   Paginated<Product>,
-  ListParams | void,
+  ProductListParams | void,
   { rejectValue: string }
 >("products/fetchAll", async (params, { rejectWithValue }) => {
   try {
     const { data } = await api.get<Paginated<Product>>("/products", {
-      params: { page: params?.page ?? 1, limit: params?.limit ?? 20 },
+      params: listQuery({
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 20,
+        search: params?.search,
+        customerId: params?.customerId,
+        workflowTemplateId: params?.workflowTemplateId,
+        isActive: params?.isActive,
+      }),
     });
     return data;
   } catch (error) {

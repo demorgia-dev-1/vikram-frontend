@@ -1,8 +1,17 @@
+/** Mirrors the API enum; RIDER still exists there, on older accounts. */
 export type Role = "ADMIN" | "USER" | "RIDER";
 
-export const ROLES: Role[] = ["ADMIN", "USER", "RIDER"];
+/** Roles offered when creating or editing a user. */
+export const ROLES: Role[] = ["ADMIN", "USER"];
 
-export type CustomerType = "AIRLINE" | "MRO" | "OEM";
+export type CustomerType = "AIRLINE" | "MRO" | "OEM" | "OTHER";
+
+export const CUSTOMER_TYPES: CustomerType[] = [
+  "AIRLINE",
+  "MRO",
+  "OEM",
+  "OTHER",
+];
 
 export interface User {
   id: string;
@@ -245,4 +254,24 @@ export interface Paginated<T> {
 export interface ListParams {
   page?: number;
   limit?: number;
+}
+
+/** GET /customers also filters by search term, type and active status. */
+export interface CustomerListParams extends ListParams {
+  search?: string;
+  type?: CustomerType | "";
+  isActive?: boolean;
+}
+
+/** GET /products also filters by search term, customer, template and status. */
+export interface ProductListParams extends ListParams {
+  search?: string;
+  customerId?: string;
+  workflowTemplateId?: string;
+  isActive?: boolean;
+}
+
+/** GET /workflow-templates filters by search term only. */
+export interface TemplateListParams extends ListParams {
+  search?: string;
 }

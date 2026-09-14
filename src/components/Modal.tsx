@@ -57,7 +57,7 @@ export default function Modal({
         aria-labelledby="modal-title"
         className={cn(
           "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl border border-border-subtle bg-white shadow-2xl sm:rounded-2xl ",
-          size === "sm" ? "sm:max-w-md" : "sm:max-w-2xl",
+          size === "sm" ? "sm:max-w-lg" : "sm:max-w-6xl"
         )}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">

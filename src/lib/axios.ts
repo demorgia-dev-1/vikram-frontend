@@ -48,4 +48,13 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+/** Drops empty filter values so they never reach the query string. */
+export function listQuery(params: Record<string, unknown> = {}) {
+  return Object.fromEntries(
+    Object.entries(params).filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    ),
+  );
+}
+
 export default api;

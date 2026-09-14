@@ -55,6 +55,7 @@ export default function VersionSnapshotModal({
             <WorkflowGraph
               stages={loaded.stages}
               transitions={loaded.transitions}
+              layoutKey={`version:${loaded.id}`}
               readOnly
               heightClass="h-[20rem]"
             />

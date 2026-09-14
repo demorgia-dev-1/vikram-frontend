@@ -203,6 +203,15 @@ export function TrashIcon({ className }: IconProps) {
   );
 }
 
+export function ResetIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+      <path d="M3 4v5h5" />
+    </Svg>
+  );
+}
+
 export function ArrowLeftIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

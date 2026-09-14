@@ -36,6 +36,14 @@ export default function UserFormModal({
   });
   const [password, setPassword] = useState("");
 
+  /*
+   * RIDER is no longer offered, but an account created before that still has
+   * it — keep it listed for that user so opening the dialog cannot silently
+   * reassign them by rendering a value the select has no option for.
+   */
+  const roleOptions =
+    user && !ROLES.includes(user.role) ? [...ROLES, user.role] : ROLES;
+
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
@@ -121,7 +129,7 @@ export default function UserFormModal({
               disabled={saving}
               className={inputClass}
             >
-              {ROLES.map((role) => (
+              {roleOptions.map((role) => (
                 <option key={role} value={role}>
                   {role}
                 </option>

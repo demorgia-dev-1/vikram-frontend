@@ -5,13 +5,19 @@ import { useRouter } from "next/navigation";
 import CustomerFormModal from "@/components/CustomerFormModal";
 import { ConfirmModal } from "@/components/Modal";
 import { BanIcon, EyeIcon, PencilIcon, PlusIcon } from "@/components/icons";
+import { useDebounced } from "@/lib/useDebounced";
 import {
   Avatar,
   Badge,
   Button,
   Card,
   EmptyState,
+  ClearFiltersButton,
+  ColumnFilter,
+  ColumnSearch,
   ErrorNote,
+  FilterCell,
+  FilterRow,
   IconButton,
   PageHeader,
   Pagination,
@@ -24,7 +30,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store";
 import { showToast } from "@/store/toastSlice";
 import { deleteCustomer, fetchCustomers } from "@/store/customersSlice";
-import type { Customer } from "@/types";
+import { CUSTOMER_TYPES, type Customer } from "@/types";
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -35,18 +41,54 @@ export default function CustomersPage() {
   );
 
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("");
+  const [status, setStatus] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [creating, setCreating] = useState(false);
   const [editTarget, setEditTarget] = useState<Customer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
 
   const isAdmin = role === "ADMIN";
 
+  // Built where it is used so the effect needs no extra dependencies.
+  const buildQuery = () => ({
+    page,
+    limit: 20,
+    search: debouncedSearch,
+    type: type as Customer["type"] | "",
+    isActive: status === "" ? undefined : status === "active",
+  });
+
   useEffect(() => {
-    dispatch(fetchCustomers({ page, limit: 20 }));
-  }, [dispatch, page]);
+    dispatch(
+      fetchCustomers({
+        page,
+        limit: 20,
+        search: debouncedSearch,
+        type: type as Customer["type"] | "",
+        isActive: status === "" ? undefined : status === "active",
+      }),
+    );
+  }, [dispatch, page, debouncedSearch, type, status]);
+
+  const filtersActive = Boolean(search || type || status);
+
+  function clearFilters() {
+    setSearch("");
+    setType("");
+    setStatus("");
+    setPage(1);
+  }
+
+  // A narrowed result set can have fewer pages than the one being viewed.
+  function changeFilter(apply: () => void) {
+    apply();
+    setPage(1);
+  }
 
   function refresh() {
-    dispatch(fetchCustomers({ page, limit: 20 }));
+    dispatch(fetchCustomers(buildQuery()));
   }
 
   async function confirmDelete() {
@@ -88,6 +130,48 @@ export default function CustomersPage() {
                 <th className={thClass}>Added</th>
                 <th className={`${thClass} text-right`}>Actions</th>
               </tr>
+
+              <FilterRow>
+                <FilterCell>
+                  <ColumnSearch
+                    value={search}
+                    onChange={(value) => changeFilter(() => setSearch(value))}
+                    placeholder="Name, email or phone"
+                  />
+                </FilterCell>
+                <FilterCell>
+                  <ColumnFilter
+                    label="Filter by type"
+                    value={type}
+                    onChange={(value) => changeFilter(() => setType(value))}
+                    allLabel="All"
+                    options={CUSTOMER_TYPES.map((item) => ({
+                      value: item,
+                      label: item,
+                    }))}
+                  />
+                </FilterCell>
+                <FilterCell />
+                <FilterCell />
+                <FilterCell>
+                  <ColumnFilter
+                    label="Filter by status"
+                    value={status}
+                    onChange={(value) => changeFilter(() => setStatus(value))}
+                    allLabel="All"
+                    options={[
+                      { value: "active", label: "Active" },
+                      { value: "inactive", label: "Inactive" },
+                    ]}
+                  />
+                </FilterCell>
+                <FilterCell />
+                <FilterCell>
+                  {filtersActive ? (
+                    <ClearFiltersButton onClick={clearFilters} />
+                  ) : null}
+                </FilterCell>
+              </FilterRow>
             </thead>
             <tbody className="divide-y divide-border-subtle">
               {loading ? (
@@ -96,8 +180,16 @@ export default function CustomersPage() {
                 <tr>
                   <td colSpan={7}>
                     <EmptyState
-                      title="No customers yet"
-                      description="Add your first customer to get started."
+                      title={
+                        filtersActive
+                          ? "No matching customers"
+                          : "No customers yet"
+                      }
+                      description={
+                        filtersActive
+                          ? "Try a different search, or clear the filters."
+                          : "Add your first customer to get started."
+                      }
                     />
                   </td>
                 </tr>

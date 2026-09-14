@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/Modal";
+import { useDebounced } from "@/lib/useDebounced";
 import ProductFormModal from "@/components/ProductFormModal";
 import { BanIcon, EyeIcon, PencilIcon, PlusIcon } from "@/components/icons";
 import {
@@ -10,7 +11,12 @@ import {
   Button,
   Card,
   EmptyState,
+  ClearFiltersButton,
+  ColumnFilter,
+  ColumnSearch,
   ErrorNote,
+  FilterCell,
+  FilterRow,
   IconButton,
   Muted,
   PageHeader,
@@ -41,15 +47,55 @@ export default function ProductsPage() {
   const pending = useAppSelector((state) => state.productWorkflow.pending);
 
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [templateId, setTemplateId] = useState("");
+  const [status, setStatus] = useState("");
+  const debouncedSearch = useDebounced(search);
   const [creating, setCreating] = useState(false);
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   const isAdmin = role === "ADMIN";
 
+  // Built where it is used so the effect needs no extra dependencies.
+  const buildQuery = () => ({
+    page,
+    limit: 20,
+    search: debouncedSearch,
+    customerId,
+    workflowTemplateId: templateId,
+    isActive: status === "" ? undefined : status === "active",
+  });
+
   useEffect(() => {
-    dispatch(fetchProducts({ page, limit: 20 }));
-  }, [dispatch, page]);
+    dispatch(
+      fetchProducts({
+        page,
+        limit: 20,
+        search: debouncedSearch,
+        customerId,
+        workflowTemplateId: templateId,
+        isActive: status === "" ? undefined : status === "active",
+      }),
+    );
+  }, [dispatch, page, debouncedSearch, customerId, templateId, status]);
+
+  const filtersActive = Boolean(search || customerId || templateId || status);
+
+  function clearFilters() {
+    setSearch("");
+    setCustomerId("");
+    setTemplateId("");
+    setStatus("");
+    setPage(1);
+  }
+
+  // A narrowed result set can have fewer pages than the one being viewed.
+  function changeFilter(apply: () => void) {
+    apply();
+    setPage(1);
+  }
 
   // Products carry only ids, so these lists are needed to show names.
   useEffect(() => {
@@ -76,7 +122,7 @@ export default function ProductsPage() {
   }
 
   function refresh() {
-    dispatch(fetchProducts({ page, limit: 20 }));
+    dispatch(fetchProducts(buildQuery()));
   }
 
   async function confirmDelete() {
@@ -118,6 +164,63 @@ export default function ProductsPage() {
                 <th className={thClass}>Added</th>
                 <th className={`${thClass} text-right`}>Actions</th>
               </tr>
+
+              <FilterRow>
+                <FilterCell>
+                  <ColumnSearch
+                    value={search}
+                    onChange={(value) => changeFilter(() => setSearch(value))}
+                    placeholder="Name or description"
+                  />
+                </FilterCell>
+                <FilterCell>
+                  <ColumnFilter
+                    label="Filter by customer"
+                    value={customerId}
+                    onChange={(value) =>
+                      changeFilter(() => setCustomerId(value))
+                    }
+                    allLabel="All"
+                    options={customers.map((customer) => ({
+                      value: customer.id,
+                      label: customer.name,
+                    }))}
+                  />
+                </FilterCell>
+                <FilterCell>
+                  <ColumnFilter
+                    label="Filter by workflow template"
+                    value={templateId}
+                    onChange={(value) =>
+                      changeFilter(() => setTemplateId(value))
+                    }
+                    allLabel="All"
+                    options={templates.map((template) => ({
+                      value: template.id,
+                      label: template.name,
+                    }))}
+                  />
+                </FilterCell>
+                <FilterCell />
+                <FilterCell>
+                  <ColumnFilter
+                    label="Filter by status"
+                    value={status}
+                    onChange={(value) => changeFilter(() => setStatus(value))}
+                    allLabel="All"
+                    options={[
+                      { value: "active", label: "Active" },
+                      { value: "inactive", label: "Inactive" },
+                    ]}
+                  />
+                </FilterCell>
+                <FilterCell />
+                <FilterCell>
+                  {filtersActive ? (
+                    <ClearFiltersButton onClick={clearFilters} />
+                  ) : null}
+                </FilterCell>
+              </FilterRow>
             </thead>
             <tbody className="divide-y divide-border-subtle">
               {loading ? (
@@ -126,8 +229,16 @@ export default function ProductsPage() {
                 <tr>
                   <td colSpan={7}>
                     <EmptyState
-                      title="No products yet"
-                      description="Add your first product to get started."
+                      title={
+                        filtersActive
+                          ? "No matching products"
+                          : "No products yet"
+                      }
+                      description={
+                        filtersActive
+                          ? "Try a different search, or clear the filters."
+                          : "Add your first product to get started."
+                      }
                     />
                   </td>
                 </tr>

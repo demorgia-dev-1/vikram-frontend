@@ -1,7 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import api, { getErrorMessage } from "@/lib/axios";
+import api, { getErrorMessage, listQuery } from "@/lib/axios";
 import type {
   StagePayload,
+  TemplateListParams,
   TransitionPayload,
   TransitionUpdatePayload,
   WorkflowTemplate,
@@ -48,12 +49,16 @@ const initialState: WorkflowTemplatesState = {
 /** The API paginates this list; a bare array is accepted too. */
 export const fetchTemplates = createAsyncThunk<
   WorkflowTemplate[],
-  void,
+  TemplateListParams | void,
   { rejectValue: string }
->("workflowTemplates/fetchAll", async (_, { rejectWithValue }) => {
+>("workflowTemplates/fetchAll", async (params, { rejectWithValue }) => {
   try {
     const { data } = await api.get("/workflow-templates", {
-      params: { page: 1, limit: 100 },
+      params: listQuery({
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 100,
+        search: params?.search,
+      }),
     });
     return (
       Array.isArray(data) ? data : (data?.data ?? [])

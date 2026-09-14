@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -24,7 +24,13 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { PencilIcon, PlusIcon, ResetIcon, TrashIcon } from "@/components/icons";
+import {
+  clearLayout,
+  loadLayout,
+  saveLayout,
+  type NodePositions,
+} from "@/lib/graphLayout";
 import type { WorkflowStage, WorkflowTransition } from "@/types";
 
 const NODE_WIDTH = 190;
@@ -323,6 +329,8 @@ export type WorkflowGraphProps = {
   /** A published snapshot renders the same graph with every write removed. */
   readOnly?: boolean;
   heightClass?: string;
+  /** Scopes the remembered node arrangement; omit to always auto-layout. */
+  layoutKey?: string;
   /** Highlights where a product currently sits. */
   currentStageId?: string | null;
   canPerform?: (transitionId: string) => boolean;
@@ -340,6 +348,8 @@ function Graph({
   transitions,
   readOnly = false,
   heightClass = "h-[26rem] sm:h-[32rem]",
+  layoutKey,
+  onResetLayout,
   currentStageId,
   canPerform,
   onPerform,
@@ -349,11 +359,22 @@ function Graph({
   onDeleteTransition,
   onConnectStages,
   onAddStage,
-}: WorkflowGraphProps) {
-  const positions = useMemo(
-    () => layout(stages, transitions),
-    [stages, transitions],
-  );
+}: WorkflowGraphProps & { onResetLayout?: () => void }) {
+  /*
+   * Computed layout first, then whatever the viewer dragged into place on a
+   * previous visit. Read once at mount: the graph remounts whenever its shape
+   * changes, so a new stage still lands in a computed slot.
+   */
+  const positions = useMemo(() => {
+    const computed = layout(stages, transitions);
+    const saved = loadLayout(layoutKey);
+
+    for (const [id, position] of Object.entries(saved)) {
+      if (computed.has(id)) computed.set(id, position);
+    }
+
+    return computed;
+  }, [stages, transitions, layoutKey]);
 
   const initialNodes = useMemo<Node[]>(
     () =>
@@ -449,6 +470,15 @@ function Graph({
     [transitions, onDeleteTransition],
   );
 
+  /** Remembers the arrangement once a drag settles. */
+  const handleNodeDragStop = useCallback(() => {
+    if (!layoutKey) return;
+
+    const next: NodePositions = {};
+    for (const node of nodes) next[node.id] = { ...node.position };
+    saveLayout(layoutKey, next);
+  }, [layoutKey, nodes]);
+
   const handleNodesDelete = useCallback(
     (deleted: Node[]) => {
       const stage = stages.find((s) => s.id === deleted[0]?.id);
@@ -493,6 +523,7 @@ function Graph({
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onEdgesDelete={handleEdgesDelete}
+        onNodeDragStop={handleNodeDragStop}
         onNodesDelete={handleNodesDelete}
         isValidConnection={isValidConnection}
         nodesConnectable={!readOnly && Boolean(onConnectStages)}
@@ -521,6 +552,14 @@ function Graph({
           color="var(--border-strong)"
         />
         <Controls showInteractive={false}>
+          {layoutKey && onResetLayout ? (
+            <ControlButton
+              onClick={onResetLayout}
+              title="Reset layout to the automatic arrangement"
+            >
+              <ResetIcon className="h-3.5 w-3.5" />
+            </ControlButton>
+          ) : null}
           {!readOnly && onAddStage ? (
             <ControlButton onClick={onAddStage} title="Add stage">
               <PlusIcon className="h-3.5 w-3.5" />
@@ -538,6 +577,8 @@ function Graph({
  * the layout, while dragging stays free in between.
  */
 export default function WorkflowGraph(props: WorkflowGraphProps) {
+  const [resetCount, setResetCount] = useState(0);
+
   const shape = [
     ...props.stages.map(
       (s) => `${s.id}:${s.name}:${s.isInitial}${s.isTerminal}`,
@@ -548,7 +589,15 @@ export default function WorkflowGraph(props: WorkflowGraphProps) {
 
   return (
     <ReactFlowProvider>
-      <Graph key={shape} {...props} />
+      <Graph
+        key={`${shape}#${resetCount}`}
+        {...props}
+        onResetLayout={() => {
+          clearLayout(props.layoutKey);
+          // Remounting re-runs the layout with nothing saved to merge in.
+          setResetCount((count) => count + 1);
+        }}
+      />
     </ReactFlowProvider>
   );
 }

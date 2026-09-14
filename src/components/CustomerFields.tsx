@@ -1,9 +1,7 @@
 "use client";
 
 import { Field, inputClass } from "@/components/ui";
-import type { CustomerPayload, CustomerType } from "@/types";
-
-export const CUSTOMER_TYPES: CustomerType[] = ["AIRLINE", "MRO", "OEM"];
+import { CUSTOMER_TYPES, type CustomerPayload } from "@/types";
 
 export const EMPTY_CUSTOMER: CustomerPayload = {
   name: "",
