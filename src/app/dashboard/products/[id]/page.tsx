@@ -18,7 +18,7 @@ import {
   ErrorNote,
   Muted,
   Spinner,
-  StatusBadge,
+  WorkflowStatusBadge,
   TransitionLabel,
   formatBytes,
   formatDate,
@@ -167,13 +167,12 @@ export default function ProductDetailPage({
     ).values(),
   );
 
-  // History is newest first, so its latest destination is where the product sits.
-  const currentStageId =
-    history[0]?.destStageId ??
-    stages.find((stage) => stage.isInitial)?.id ??
-    null;
+  // The API reports where the workflow item sits, so nothing is derived here.
+  const currentStage = selected.currentStage;
+  const currentStageId = currentStage?.id ?? null;
 
   function stageName(stageId: string) {
+    if (stageId === currentStage?.id) return currentStage.name;
     return stages.find((stage) => stage.id === stageId)?.name ?? "a stage";
   }
 
@@ -244,10 +243,10 @@ export default function ProductDetailPage({
         ]}
         badges={
           <>
-            {currentStageId ? (
-              <Badge tone="sky">{stageName(currentStageId)}</Badge>
+            {currentStage ? (
+              <Badge tone="sky">{currentStage.name}</Badge>
             ) : null}
-            <StatusBadge active={selected.isActive} />
+            <WorkflowStatusBadge status={selected.workflowItemStatus} />
           </>
         }
       />
@@ -286,15 +285,11 @@ export default function ProductDetailPage({
           </DetailItem>
 
           <DetailItem label="Current stage">
-            {currentStageId ? (
-              stageName(currentStageId)
-            ) : (
-              <Muted>Not started</Muted>
-            )}
+            {currentStage?.name ?? <Muted>Not started</Muted>}
           </DetailItem>
 
-          <DetailItem label="Status">
-            <StatusBadge active={selected.isActive} />
+          <DetailItem label="Workflow status">
+            <WorkflowStatusBadge status={selected.workflowItemStatus} />
           </DetailItem>
 
           <DetailItem label="Created">

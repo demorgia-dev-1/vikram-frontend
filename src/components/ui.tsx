@@ -328,6 +328,26 @@ export function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
+/** ACTIVE / COMPLETED / REVOKED, each with its own tone. */
+export function WorkflowStatusBadge({ status }: { status: string }) {
+  const tones: Record<string, string> = {
+    ACTIVE: "bg-primary-soft text-primary ring-primary/20",
+    COMPLETED: "bg-success-soft text-success ring-success/20",
+    REVOKED: "bg-danger-soft text-danger ring-danger/20",
+  };
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        tones[status] ?? "bg-surface-muted text-muted ring-border-subtle",
+      )}
+    >
+      {status.charAt(0) + status.slice(1).toLowerCase()}
+    </span>
+  );
+}
+
 export function ErrorNote({ message }: { message: string }) {
   return (
     <p

@@ -18,7 +18,6 @@ import {
   EmptyState,
   ErrorNote,
   PageHeader,
-  StatusBadge,
   cardClass,
   cn,
   formatDate,
@@ -91,12 +90,6 @@ export default function DashboardPage() {
         />
         <Tile label="Your role" hint="Access level">
           <Badge tone="sky">{user.role}</Badge>
-        </Tile>
-        <Tile
-          label="Account"
-          hint={`Member since ${formatDate(user.createdAt)}`}
-        >
-          <StatusBadge active={user.isActive} />
         </Tile>
       </div>
 

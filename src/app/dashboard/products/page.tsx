@@ -21,7 +21,7 @@ import {
   Muted,
   PageHeader,
   Pagination,
-  StatusBadge,
+  WorkflowStatusBadge,
   TableSkeleton,
   formatDate,
   tdClass,
@@ -204,7 +204,7 @@ export default function ProductsPage() {
                 <FilterCell />
                 <FilterCell>
                   <ColumnFilter
-                    label="Filter by status"
+                    label="Filter by record status"
                     value={status}
                     onChange={(value) => changeFilter(() => setStatus(value))}
                     allLabel="All"
@@ -267,15 +267,22 @@ export default function ProductsPage() {
                       )}
                     </td>
                     <td className={`${tdClass} whitespace-nowrap`}>
-                      {templateName(product.workflowTemplateId) ?? (
-                        <Muted>Not available</Muted>
-                      )}
+                      <p>
+                        {templateName(product.workflowTemplateId) ?? (
+                          <Muted>Not available</Muted>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {product.currentStage?.name}
+                      </p>
                     </td>
                     <td className={`${tdClass} text-muted`}>
                       {product.transitionAssignments.length}
                     </td>
                     <td className={tdClass}>
-                      <StatusBadge active={product.isActive} />
+                      <WorkflowStatusBadge
+                        status={product.workflowItemStatus}
+                      />
                     </td>
                     <td className={`${tdClass} whitespace-nowrap text-muted`}>
                       {formatDate(product.createdAt)}

@@ -132,6 +132,8 @@ export interface TransitionAssignmentInput {
   allowAttachments: boolean;
 }
 
+export type WorkflowItemStatus = "ACTIVE" | "COMPLETED" | "REVOKED";
+
 export interface Product {
   id: string;
   name: string;
@@ -146,6 +148,10 @@ export interface Product {
   createdAt: string;
   updatedAt: string;
   transitionAssignments: TransitionAssignment[];
+  /** Where the product's workflow item stands. */
+  workflowItemStatus: WorkflowItemStatus;
+  /** The instance stage it currently sits in — same id space as transitions. */
+  currentStage: WorkflowStage;
 }
 
 export interface ProductPayload {
