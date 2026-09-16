@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAppSelector } from "@/store";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
+  BellIcon,
   BoxIcon,
   InboxIcon,
   BuildingIcon,
@@ -21,9 +22,16 @@ const MY_WORK: NavItem = {
   icon: <InboxIcon />,
 };
 
+const NOTIFICATIONS: NavItem = {
+  label: "Notifications",
+  href: "/dashboard/notifications",
+  icon: <BellIcon />,
+};
+
 const OPERATIONS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <GridIcon /> },
   MY_WORK,
+  NOTIFICATIONS,
   { label: "Products", href: "/dashboard/products", icon: <BoxIcon /> },
   { label: "Customers", href: "/dashboard/customers", icon: <BuildingIcon /> },
 ];
@@ -69,7 +77,7 @@ export default function Sidebar({
       <nav className="flex-1 overflow-y-auto px-3 py-5">
         <NavGroup
           label="Operations"
-          items={isAdmin ? OPERATIONS : [MY_WORK]}
+          items={isAdmin ? OPERATIONS : [MY_WORK, NOTIFICATIONS]}
           pathname={pathname}
           onNavigate={onNavigate}
         />

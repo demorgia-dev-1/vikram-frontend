@@ -6,11 +6,13 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Toaster from "@/components/Toaster";
 import { Spinner } from "@/components/ui";
+import { useNotificationStream } from "@/lib/useNotificationStream";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchMe, logout } from "@/store/authSlice";
 
-/** The only section a non-admin may open. */
+/** The sections a non-admin may open — both are their own personal work. */
 const MY_WORK = "/dashboard/my-work";
+const OPEN_TO_EVERYONE = [MY_WORK, "/dashboard/notifications"];
 
 export default function DashboardLayout({
   children,
@@ -22,6 +24,9 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = user?.role === "ADMIN";
+
+  // Live notifications for as long as a session is signed in.
+  useNotificationStream(Boolean(token && user));
 
   // hydrateAuth runs in the store provider, so a null token here means signed out.
   useEffect(() => {
@@ -38,7 +43,7 @@ export default function DashboardLayout({
   // Every section but My work is admin-only, so a non-admin who reaches one by
   // URL is sent back. The server still enforces this; hiding the nav does not.
   useEffect(() => {
-    if (user && !isAdmin && pathname !== MY_WORK) {
+    if (user && !isAdmin && !OPEN_TO_EVERYONE.includes(pathname)) {
       router.replace(MY_WORK);
     }
   }, [user, isAdmin, pathname, router]);
@@ -50,7 +55,7 @@ export default function DashboardLayout({
 
   // The second condition covers the tick before the redirect above lands, so an
   // admin-only page never flashes up for a non-admin.
-  if (!token || !user || (!isAdmin && pathname !== MY_WORK)) {
+  if (!token || !user || (!isAdmin && !OPEN_TO_EVERYONE.includes(pathname))) {
     return (
       <div className="flex flex-1 items-center justify-center text-subtle">
         <Spinner className="h-6 w-6" />

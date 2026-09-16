@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
 import authReducer from "./authSlice";
 import customersReducer from "./customersSlice";
+import notificationsReducer from "./notificationsSlice";
 import productWorkflowReducer from "./productWorkflowSlice";
 import productsReducer from "./productsSlice";
 import toastReducer from "./toastSlice";
@@ -14,6 +15,7 @@ export const makeStore = () =>
       auth: authReducer,
       users: usersReducer,
       customers: customersReducer,
+      notifications: notificationsReducer,
       products: productsReducer,
       productWorkflow: productWorkflowReducer,
       workflowTemplates: workflowTemplatesReducer,

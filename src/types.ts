@@ -265,6 +265,30 @@ export interface HistoryEntry {
   attachments: HistoryAttachment[];
 }
 
+export type NotificationType = "PENDING_TRANSITION" | "TRANSITION_ASSIGNED";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  recipientId: string;
+  productId: string;
+  productName: string;
+  transitionId: string;
+  transitionName: string | null;
+  stageName: string;
+  /** Pre-composed sentence; the ids are there for deep-linking. */
+  message: string;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Omitting isRead returns unread only — the API's own default. */
+export interface NotificationListParams extends ListParams {
+  isRead?: boolean;
+}
+
 export interface Meta {
   page: number;
   limit: number;

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import NotificationsMenu from "@/components/NotificationsMenu";
 import { ArrowLeftIcon, ChevronDownIcon, MenuIcon } from "@/components/icons";
 import { IconButton, cn } from "@/components/ui";
 import type { User } from "@/types";
@@ -10,6 +11,7 @@ import type { User } from "@/types";
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/dashboard/my-work": "My work",
+  "/dashboard/notifications": "Notifications",
   "/dashboard/customers": "Customers",
   "/dashboard/products": "Products",
   "/dashboard/users": "Users",
@@ -96,10 +98,7 @@ export default function Header({
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <span className="hidden items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted px-3 py-1.5 text-xs font-medium text-muted md:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-success" />
-          Live
-        </span>
+        <NotificationsMenu />
         <span aria-hidden className="mx-1 h-6 w-px bg-border-subtle" />
         <UserMenu user={user} onLogout={onLogout} />
       </div>
