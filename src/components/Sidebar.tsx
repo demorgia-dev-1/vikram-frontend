@@ -31,9 +31,9 @@ const NOTIFICATIONS: NavItem = {
 const OPERATIONS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <GridIcon /> },
   MY_WORK,
-  NOTIFICATIONS,
   { label: "Products", href: "/dashboard/products", icon: <BoxIcon /> },
   { label: "Customers", href: "/dashboard/customers", icon: <BuildingIcon /> },
+  NOTIFICATIONS,
 ];
 
 const PLATFORM: NavItem[] = [
@@ -54,6 +54,9 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const isAdmin = useAppSelector((state) => state.auth.user?.role) === "ADMIN";
+  const unreadCount = useAppSelector(
+    (state) => state.notifications.unreadCount,
+  );
 
   return (
     <aside
@@ -80,6 +83,7 @@ export default function Sidebar({
           items={isAdmin ? OPERATIONS : [MY_WORK, NOTIFICATIONS]}
           pathname={pathname}
           onNavigate={onNavigate}
+          unreadCount={unreadCount}
         />
         {isAdmin ? (
           <div className="mt-7">
@@ -88,6 +92,7 @@ export default function Sidebar({
               items={PLATFORM}
               pathname={pathname}
               onNavigate={onNavigate}
+              unreadCount={unreadCount}
             />
           </div>
         ) : null}
@@ -105,11 +110,13 @@ function NavGroup({
   items,
   pathname,
   onNavigate,
+  unreadCount,
 }: {
   label: string;
   items: NavItem[];
   pathname: string;
   onNavigate: () => void;
+  unreadCount: number;
 }) {
   return (
     <div>
@@ -125,23 +132,51 @@ function NavGroup({
 
           return (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  active
-                    ? "bg-sidebar-active font-medium text-white"
-                    : "text-sidebar-foreground hover:bg-sidebar-active/60 hover:text-white"
-                }`}
-              >
-                <span className={active ? "text-accent" : ""}>{item.icon}</span>
-                {item.label}
-              </Link>
+              <NavLink
+                item={item}
+                active={active}
+                onNavigate={onNavigate}
+                trailing={
+                  item.href === NOTIFICATIONS.href && unreadCount > 0 ? (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-semibold text-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  ) : null
+                }
+              />
             </li>
           );
         })}
       </ul>
     </div>
+  );
+}
+
+function NavLink({
+  item,
+  active,
+  onNavigate,
+  trailing,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate: () => void;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+        active
+          ? "bg-sidebar-active font-medium text-white"
+          : "text-sidebar-foreground hover:bg-sidebar-active/60 hover:text-white"
+      }`}
+    >
+      <span className={active ? "text-accent" : ""}>{item.icon}</span>
+      {item.label}
+      {trailing}
+    </Link>
   );
 }
