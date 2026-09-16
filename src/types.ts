@@ -182,26 +182,54 @@ export interface ProductTransition {
   allowAttachments?: boolean;
 }
 
-/** A transition assigned to the signed-in user that is ready to run now. */
+export interface HistoryAttachment {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+/** One transition assigned to you, actionable from the product's current stage. */
 export interface PendingTransition {
-  productId: string;
-  productName: string;
   transitionId: string;
   transitionName: string | null;
-  srcStage: WorkflowStage;
+  /** Where it would move the product; the source is the product's currentStage. */
   destStage: WorkflowStage;
   allowAttachments: boolean;
 }
 
-/** A transition the signed-in user has already performed. */
-export interface PerformedTransition {
+/** Pending work grouped by product — a product with nothing to do is omitted. */
+export interface PendingProduct {
   productId: string;
   productName: string;
+  productDescription: string | null;
+  customerId: string;
+  customerName: string;
+  /** Every pending transition below starts from this stage. */
+  currentStage: WorkflowStage;
+  pendingTransitions: PendingTransition[];
+}
+
+/** One transition you performed, with anything you attached at the time. */
+export interface PerformedTransition {
+  logId: string;
   transitionId: string;
   transitionName: string | null;
   srcStage: WorkflowStage;
   destStage: WorkflowStage;
   performedAt: string;
+  attachments: HistoryAttachment[];
+}
+
+/** Your own activity, grouped by product, most recent first within each. */
+export interface PerformedProduct {
+  productId: string;
+  productName: string;
+  productDescription: string | null;
+  customerId: string;
+  customerName: string;
+  performedTransitions: PerformedTransition[];
 }
 
 export interface PresignFileRequest {
@@ -222,14 +250,6 @@ export interface AttachmentRef {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
-}
-
-export interface HistoryAttachment {
-  id: string;
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
-  createdAt: string;
 }
 
 export interface HistoryEntry {

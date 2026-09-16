@@ -1,8 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api, { getErrorMessage } from "@/lib/axios";
 import type {
-  PendingTransition,
-  PerformedTransition,
+  PendingProduct,
+  PerformedProduct,
   AttachmentRef,
   HistoryEntry,
   PresignFileRequest,
@@ -20,10 +20,10 @@ interface ProductWorkflowState {
   historyError: string | null;
   performing: boolean;
   performError: string | null;
-  pending: PendingTransition[];
+  pending: PendingProduct[];
   pendingLoading: boolean;
   pendingError: string | null;
-  performed: PerformedTransition[];
+  performed: PerformedProduct[];
   performedLoading: boolean;
   performedError: string | null;
 }
@@ -114,12 +114,12 @@ export const fetchProductTransitions = createAsyncThunk<
 
 /** Transitions waiting on the signed-in user, across every product. */
 export const fetchMyPendingTransitions = createAsyncThunk<
-  PendingTransition[],
+  PendingProduct[],
   void,
   { rejectValue: string }
 >("productWorkflow/pending", async (_, { rejectWithValue }) => {
   try {
-    const { data } = await api.get<PendingTransition[]>(
+    const { data } = await api.get<PendingProduct[]>(
       "/products/me/pending-transitions",
     );
     return Array.isArray(data) ? data : [];
@@ -131,12 +131,12 @@ export const fetchMyPendingTransitions = createAsyncThunk<
 });
 
 export const fetchMyPerformedTransitions = createAsyncThunk<
-  PerformedTransition[],
+  PerformedProduct[],
   void,
   { rejectValue: string }
 >("productWorkflow/performed", async (_, { rejectWithValue }) => {
   try {
-    const { data } = await api.get<PerformedTransition[]>(
+    const { data } = await api.get<PerformedProduct[]>(
       "/products/me/performed-transitions",
     );
     return Array.isArray(data) ? data : [];

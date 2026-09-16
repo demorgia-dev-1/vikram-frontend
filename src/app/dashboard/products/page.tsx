@@ -105,12 +105,8 @@ export default function ProductsPage() {
   }, [dispatch]);
 
   // How many transitions on each product are waiting on the signed-in user.
-  const waitingByProduct = pending.reduce<Record<string, number>>(
-    (counts, item) => {
-      counts[item.productId] = (counts[item.productId] ?? 0) + 1;
-      return counts;
-    },
-    {},
+  const waitingByProduct = Object.fromEntries(
+    pending.map((group) => [group.productId, group.pendingTransitions.length]),
   );
 
   function customerName(customerId: string) {

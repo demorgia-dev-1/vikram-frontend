@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import PerformTransitionModal from "@/components/PerformTransitionModal";
 import WorkflowGraph from "@/components/WorkflowGraph";
-import { BoxIcon, ResetIcon } from "@/components/icons";
+import { BoxIcon, DownloadIcon, ResetIcon } from "@/components/icons";
 import {
   Avatar,
   Badge,
@@ -179,15 +179,19 @@ export default function ProductDetailPage({
   /** Transitions on this product the API says are waiting on the signed-in user. */
   const waitingOnYou = new Set(
     pending
-      .filter((item) => item.productId === id)
-      .map((item) => item.transitionId),
+      .filter((group) => group.productId === id)
+      .flatMap((group) =>
+        group.pendingTransitions.map((item) => item.transitionId),
+      ),
   );
 
   /** Transitions on this product performed by the signed-in user. */
   const performedByYou = new Set(
     performed
-      .filter((item) => item.productId === id)
-      .map((item) => item.transitionId),
+      .filter((group) => group.productId === id)
+      .flatMap((group) =>
+        group.performedTransitions.map((item) => item.transitionId),
+      ),
   );
 
   /** Transitions already recorded in this product's history. */
@@ -443,7 +447,10 @@ export default function ProductDetailPage({
           ) : (
             <ul className="divide-y divide-border-subtle">
               {history.map((entry) => (
-                <li key={entry.id} className="flex gap-3 px-5 py-4">
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-start gap-3 px-5 py-4"
+                >
                   <Avatar
                     name={entry.performedByName}
                     className="h-8 w-8 text-xs"
@@ -473,37 +480,38 @@ export default function ProductDetailPage({
                       {entry.performedByEmail} ·{" "}
                       {formatDateTime(entry.performedAt)}
                     </p>
-
-                    {entry.attachments.length > 0 ? (
-                      <ul className="mt-2 space-y-1">
-                        {entry.attachments.map((attachment) => (
-                          <li key={attachment.id}>
-                            <button
-                              onClick={() =>
-                                openAttachment(entry.id, attachment.id)
-                              }
-                              className="text-xs font-medium text-primary transition hover:text-primary-hover"
-                            >
-                              {attachment.fileName}
-                              <span className="ml-1.5 font-normal text-subtle">
-                                {formatBytes(attachment.sizeBytes)}
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
                   </div>
+
+                  {/* Attachments sit in the row's trailing space, one download
+                      button each, rather than stacked under the sentence. */}
+                  {entry.attachments.length > 0 ? (
+                    <div className="flex shrink-0 flex-col items-stretch gap-1.5">
+                      {entry.attachments.map((attachment) => (
+                        <button
+                          key={attachment.id}
+                          type="button"
+                          title={`Download ${attachment.fileName}`}
+                          onClick={() =>
+                            openAttachment(entry.id, attachment.id)
+                          }
+                          className="flex max-w-64 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary"
+                        >
+                          <DownloadIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate font-medium">
+                            {attachment.fileName}
+                          </span>
+                          <span className="ml-auto shrink-0 text-subtle">
+                            {formatBytes(attachment.sizeBytes)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
 
-          {attachmentError ? (
-            <div className="px-5 pb-5">
-              <ErrorNote message={attachmentError} />
-            </div>
-          ) : null}
           {attachmentError ? (
             <div className="px-5 pb-5">
               <ErrorNote message={attachmentError} />

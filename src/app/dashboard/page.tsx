@@ -38,6 +38,12 @@ export default function DashboardPage() {
     (state) => state.productWorkflow,
   );
 
+  // The API groups pending work by product, so count the transitions inside.
+  const pendingCount = pending.reduce(
+    (total, group) => total + group.pendingTransitions.length,
+    0,
+  );
+
   // Small page size: the tiles only need meta.total, the list only the newest few.
   useEffect(() => {
     dispatch(fetchUsers({ page: 1, limit: 5 }));
@@ -58,7 +64,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatTile
           label="Waiting on you"
-          value={pending.length}
+          value={pendingCount}
           loading={pendingLoading}
           hint="Transitions assigned to you"
           icon={<InboxIcon className="h-4 w-4" />}
